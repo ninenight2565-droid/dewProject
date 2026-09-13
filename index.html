@@ -288,8 +288,9 @@
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const idParam = urlParams.get('id');
-            if (idParam) {
-                loadPatientData(idParam);
+            const dataParam = urlParams.get('d');
+            if (idParam || dataParam) {
+                loadPatientData(idParam, dataParam);
             }
         });
 
@@ -388,15 +389,17 @@
         // จัดการลิงก์ URL ที่สแกนได้
         function processScan(text) {
             let scannedId = null;
+            let scannedData = null;
             try {
                 let url = new URL(text);
                 scannedId = url.searchParams.get("id");
+                scannedData = url.searchParams.get("d");
             } catch(e) {
                 scannedId = text.trim();
             }
 
-            if(scannedId) {
-                loadPatientData(scannedId);
+            if(scannedId || scannedData) {
+                loadPatientData(scannedId, scannedData);
             } else {
                 alert("รูปแบบ QR Code ไม่ถูกต้อง");
                 resetApp();
@@ -404,10 +407,36 @@
         }
 
         // โหลดข้อมูลและเล่นเสียง
-        function loadPatientData(id) {
+        function loadPatientData(id, rawDataPayload) {
             document.getElementById('scanBox').classList.add('hidden');
-            const localDb = JSON.parse(localStorage.getItem('hospital_db')) || {};
-            const data = localDb[id];
+            let data = null;
+
+            // 1. ถ้ามี payload ฝังมากับ QR Code (สำหรับข้ามเครื่อง/มือถือที่ไม่มีฐานข้อมูล)
+            if (rawDataPayload) {
+                try {
+                    const parsed = JSON.parse(decodeURIComponent(rawDataPayload));
+                    data = {
+                        title: parsed.t || parsed.title || "คำแนะนำการดูแลตนเอง",
+                        type: parsed.type || 'tts',
+                        text: parsed.txt || parsed.text || '',
+                        audioBase64: parsed.audioBase64 || ''
+                    };
+                    // บันทึกลงเครื่องผู้ป่วยเผื่อฟังซ้ำ
+                    if (id) {
+                        const localDb = JSON.parse(localStorage.getItem('hospital_db')) || {};
+                        localDb[id] = data;
+                        localStorage.setItem('hospital_db', JSON.stringify(localDb));
+                    }
+                } catch(e) {
+                    console.warn("Payload decode error:", e);
+                }
+            }
+
+            // 2. ถ้าไม่มี payload ให้หาจาก localStorage ในเครื่อง
+            if (!data && id) {
+                const localDb = JSON.parse(localStorage.getItem('hospital_db')) || {};
+                data = localDb[id];
+            }
             
             if (data) {
                 currentRecord = data;

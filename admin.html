@@ -541,12 +541,24 @@
         }
 
         function renderQRCodeForId(id, baseUrl) {
-            // สร้าง URL ที่ถูกต้อง ไม่ว่าจะเป็น https://domain.com/index.html?id=... หรือ https://domain.com/?id=...
+            const item = db[id];
             let finalUrl = baseUrl;
-            if (finalUrl.includes('?')) {
-                finalUrl = `${finalUrl}&id=${encodeURIComponent(id)}`;
+
+            // ถ้ามีข้อมูล ให้ฝัง payload ย่อไปด้วย เพื่อให้มือถือเครื่องอื่นที่ไม่มี localStorage อ่านได้ทันที 100%
+            if (item) {
+                // สร้าง payload กะทัดรัด
+                const payloadObj = {
+                    id: id,
+                    t: item.title,
+                    type: item.type,
+                    txt: item.text || ''
+                };
+                const encodedPayload = encodeURIComponent(JSON.stringify(payloadObj));
+                const separator = finalUrl.includes('?') ? '&' : '?';
+                finalUrl = `${finalUrl}${separator}id=${encodeURIComponent(id)}&d=${encodedPayload}`;
             } else {
-                finalUrl = `${finalUrl}?id=${encodeURIComponent(id)}`;
+                const separator = finalUrl.includes('?') ? '&' : '?';
+                finalUrl = `${finalUrl}${separator}id=${encodeURIComponent(id)}`;
             }
 
             const qrBox = document.getElementById('qrcodeBox');
@@ -554,11 +566,11 @@
 
             qrcodeObj = new QRCode(qrBox, {
                 text: finalUrl,
-                width: 200,
-                height: 200,
+                width: 210,
+                height: 210,
                 colorDark : "#0f172a",
                 colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.H
+                correctLevel : QRCode.CorrectLevel.M
             });
         }
 

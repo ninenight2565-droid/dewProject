@@ -407,11 +407,11 @@
         }
 
         // โหลดข้อมูลและเล่นเสียง
-        function loadPatientData(id, rawDataPayload) {
+        async function loadPatientData(id, rawDataPayload) {
             document.getElementById('scanBox').classList.add('hidden');
             let data = null;
 
-            // 1. ถ้ามี payload ฝังมากับ QR Code (สำหรับข้ามเครื่อง/มือถือที่ไม่มีฐานข้อมูล)
+            // 1. ดึงจาก payload ที่ฝังมากับ QR Code (ถ้ามี)
             if (rawDataPayload) {
                 try {
                     const parsed = JSON.parse(decodeURIComponent(rawDataPayload));
@@ -421,18 +421,27 @@
                         text: parsed.txt || parsed.text || '',
                         audioBase64: parsed.audioBase64 || ''
                     };
-                    // บันทึกลงเครื่องผู้ป่วยเผื่อฟังซ้ำ
-                    if (id) {
-                        const localDb = JSON.parse(localStorage.getItem('hospital_db')) || {};
-                        localDb[id] = data;
-                        localStorage.setItem('hospital_db', JSON.stringify(localDb));
-                    }
                 } catch(e) {
                     console.warn("Payload decode error:", e);
                 }
             }
 
-            // 2. ถ้าไม่มี payload ให้หาจาก localStorage ในเครื่อง
+            // 2. ดึงจากไฟล์ data.json บนเว็บออนไลน์ (ตรงกันทุกเครื่อง 100%)
+            if (!data && id) {
+                try {
+                    const res = await fetch('data.json?v=' + Date.now());
+                    if (res.ok) {
+                        const onlineDb = await res.json();
+                        if (onlineDb && onlineDb[id]) {
+                            data = onlineDb[id];
+                        }
+                    }
+                } catch(err) {
+                    console.warn("Failed to fetch data.json:", err);
+                }
+            }
+
+            // 3. Fallback: หาจาก localStorage ในเครื่อง
             if (!data && id) {
                 const localDb = JSON.parse(localStorage.getItem('hospital_db')) || {};
                 data = localDb[id];

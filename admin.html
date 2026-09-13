@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจัดการข้อมูลคำแนะนำผู้ป่วย (Admin)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {}
+            }
+        }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        /* Glassmorphism Classes with Teal Tint */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.05), 0 0 25px rgba(20, 184, 166, 0.08);
+        }
+        .dark .glass-card {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.45), 0 0 30px rgba(20, 184, 166, 0.12);
+        }
+
+        .glass-input {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(204, 251, 241, 0.8);
+        }
+        .dark .glass-input {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #f8fafc;
+        }
+        .glass-input:focus {
+            border-color: #0d9488;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.2);
+        }
+        .dark .glass-input:focus {
+            border-color: #2dd4bf;
+            box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.2);
+        }
+
+        /* Ambient Glowing Backdrop */
+        .subtle-mesh {
+            background-color: #f0fdfa; /* teal-50 */
+        }
+        .dark .subtle-mesh {
+            background-color: #022c22; /* teal-950 */
+        }
+    </style>
+</head>
+<body class="subtle-mesh min-h-screen text-slate-800 dark:text-slate-100 transition-colors duration-300 font-sans selection:bg-teal-500 selection:text-white flex flex-col justify-between relative overflow-x-hidden">
+
+    <!-- Ambient Floating Orbs Background -->
+    <div class="fixed inset-0 pointer-events-none overflow-hidden -z-10">
+        <div class="absolute -top-32 -left-32 w-96 h-96 bg-teal-400/25 dark:bg-teal-600/20 rounded-full blur-3xl"></div>
+        <div class="absolute top-1/2 -right-32 w-[28rem] h-[28rem] bg-emerald-400/20 dark:bg-emerald-600/15 rounded-full blur-3xl"></div>
+        <div class="absolute -bottom-32 left-1/3 w-[26rem] h-[26rem] bg-cyan-400/20 dark:bg-cyan-500/15 rounded-full blur-3xl"></div>
+    </div>
+
+    <!-- Floating Global Navigation (Expansive) -->
+    <nav class="w-full max-w-6xl mx-auto pt-6 px-4 sm:px-8 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-teal-500 to-emerald-400 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-teal-500/30">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+            </div>
+            <div>
+                <span class="font-bold text-base text-slate-900 dark:text-white tracking-tight">ระบบจัดการคำแนะนำผู้ป่วย</span>
+                <span class="block text-xs text-slate-500 dark:text-teal-300/70">แผงควบคุมสำหรับเจ้าหน้าที่</span>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2.5">
+            <a href="index.html" class="glass-card px-4 py-2 rounded-2xl text-xs font-semibold text-teal-700 dark:text-teal-300 hover:text-teal-900 dark:hover:text-white transition flex items-center gap-1.5 shadow-sm">
+                <span>หน้าสแกนผู้ป่วย</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+            </a>
+            <button id="themeToggleBtn" onclick="toggleTheme()" class="w-10 h-10 rounded-2xl glass-card flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-300 transition shadow-sm" title="สลับโหมด มืด/สว่าง">
+                <svg id="moonIcon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+                <svg id="sunIcon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+            </button>
+        </div>
+    </nav>
+
+    <!-- หน้า Login Minimal Card -->
+    <div id="loginSection" class="min-h-[75vh] flex items-center justify-center p-4">
+        <div class="glass-card p-8 sm:p-12 rounded-[2.5rem] w-full max-w-md text-center transition-all duration-300">
+            <div class="w-16 h-16 mx-auto mb-5 rounded-2xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-300 flex items-center justify-center border border-teal-200/50 dark:border-teal-800/50">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+            </div>
+            
+            <h2 class="text-2xl font-extrabold text-slate-900 dark:text-white mb-2 tracking-tight">เข้าสู่ระบบจัดการ</h2>
+            <p class="text-xs text-slate-400 dark:text-slate-500 mb-6">กรอกรหัสผ่านเพื่อเข้าสู่ระบบบริหารคำแนะนำผู้ป่วย</p>
+            
+            <div class="relative mb-4">
+                <input type="password" id="passwordInput" placeholder="รหัสผ่าน (ค่าเริ่มต้น 1234)" class="w-full px-4 py-3.5 rounded-2xl glass-input text-center text-base tracking-wider" onkeydown="if(event.key === 'Enter') checkLogin()">
+            </div>
+            
+            <button onclick="checkLogin()" class="w-full bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white font-semibold py-3.5 rounded-2xl shadow-md shadow-teal-500/20 active:scale-[0.99] transition text-sm">
+                เข้าสู่ระบบ
+            </button>
+            
+            <div id="sessionTimeoutNotice" class="mt-4 p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-800/50 text-amber-700 dark:text-amber-300 text-xs hidden">
+                เซสชันหมดอายุ (ครบกำหนด 1 วัน) กรุณาเข้าสู่ระบบใหม่
+            </div>
+            <p id="loginError" class="text-rose-600 text-xs mt-3 font-medium hidden">รหัสผ่านไม่ถูกต้อง</p>
+        </div>
+    </div>
+
+    <!-- หน้า Dashboard (Expansive Full Layout) -->
+    <div id="dashboardSection" class="hidden w-full max-w-6xl mx-auto p-4 sm:p-8 pb-16 flex-1">
+        
+        <!-- Header Dashboard พร้อมสถานะ Session Bar -->
+        <div class="glass-card p-6 sm:p-8 rounded-3xl mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">คลังคำแนะนำผู้ป่วย</h1>
+                <p class="text-xs sm:text-sm text-slate-400 dark:text-slate-500 mt-1">จัดการข้อมูลคำแนะนำ บันทึกเสียง และสร้างรหัส QR Code</p>
+            </div>
+
+            <!-- Logout Action Button -->
+            <div>
+                <button onclick="logout()" class="px-4 py-2 rounded-2xl glass-card hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 text-slate-700 dark:text-slate-300 text-xs font-semibold transition flex items-center gap-1.5 shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    <span>ออกจากระบบ</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- ฟอร์มเพิ่มข้อมูล Glass Form Card (Clean & Expansive) -->
+        <div class="glass-card p-6 sm:p-10 rounded-3xl mb-8">
+            <div class="flex items-center gap-2.5 mb-6">
+                <span class="w-2 h-2 rounded-full bg-teal-500"></span>
+                <h2 class="text-lg font-bold text-slate-900 dark:text-white">เพิ่มคำแนะนำใหม่</h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Custom ID (ภาษาอังกฤษ / ตัวเลข / ขีด)</label>
+                    <input type="text" id="recordId" placeholder="เช่น wound-care-01" class="w-full px-4 py-3.5 rounded-2xl glass-input text-sm" oninput="checkDuplicateId()">
+                    <p id="idWarning" class="text-rose-600 text-xs mt-1.5 hidden font-medium">รหัส ID นี้ถูกใช้งานแล้ว กรุณาเปลี่ยนเป็นชื่ออื่น</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">หัวข้อคำแนะนำ</label>
+                    <input type="text" id="recordTitle" placeholder="เช่น วิธีทำความสะอาดและดูแลแผลผ่าตัด" class="w-full px-4 py-3.5 rounded-2xl glass-input text-sm">
+                </div>
+            </div>
+
+            <div class="mt-6">
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">รูปแบบเสียงคำแนะนำ</label>
+                <div class="flex flex-wrap gap-4">
+                    <label class="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-2xl glass-card cursor-pointer border border-teal-100 dark:border-slate-800 transition">
+                        <input type="radio" name="audioType" value="tts" checked onchange="toggleAudioInput()" class="text-teal-600 focus:ring-teal-500">
+                        <span class="text-sm font-medium text-slate-700 dark:text-slate-200">ระบบอ่านออกเสียง (TTS)</span>
+                    </label>
+                    <label class="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-2xl glass-card cursor-pointer border border-teal-100 dark:border-slate-800 transition">
+                        <input type="radio" name="audioType" value="mp3" onchange="toggleAudioInput()" class="text-teal-600 focus:ring-teal-500">
+                        <span class="text-sm font-medium text-slate-700 dark:text-slate-200">ไฟล์เสียง MP3</span>
+                    </label>
+                </div>
+            </div>
+
+            <div id="ttsInputBox" class="mt-6">
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">ข้อความที่ต้องการให้อ่าน</label>
+                <textarea id="ttsText" rows="3" placeholder="ระบุข้อความคำแนะนำสำหรับผู้ป่วย เช่น แนะนำให้ทำความสะอาดแผลวันละ 2 ครั้ง..." class="w-full px-4 py-3.5 rounded-2xl glass-input text-sm"></textarea>
+            </div>
+
+            <div id="mp3InputBox" class="mt-6 hidden">
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">เลือกไฟล์เสียง MP3</label>
+                <input type="file" id="mp3File" accept="audio/mp3,audio/*" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-teal-50 file:text-teal-700 dark:file:bg-teal-950/60 dark:file:text-teal-300">
+            </div>
+
+            <div class="mt-6 flex justify-end">
+                <button id="saveBtn" onclick="saveRecord()" class="bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white font-semibold px-7 py-3 rounded-2xl shadow-md shadow-teal-500/25 active:scale-[0.99] transition text-sm flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>บันทึกข้อมูล</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- ตารางแสดงรายการทั้งหมด Glass List Card (Clean & Expansive) -->
+        <div class="glass-card p-6 sm:p-10 rounded-3xl">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900 dark:text-white">รายการคำแนะนำทั้งหมด</h2>
+                    <p class="text-xs text-slate-400 dark:text-slate-500">สร้างรหัส QR Code หรือจัดการข้อมูลคำแนะนำ</p>
+                </div>
+            </div>
+            
+            <div id="recordsList" class="space-y-3">
+                <!-- Data items injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal สำหรับแสดง QR Code Minimal Style -->
+    <div id="qrModal" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="glass-card p-8 rounded-[2rem] text-center max-w-sm w-full shadow-2xl relative border border-white/80 dark:border-teal-800/30">
+            <h3 class="text-base font-bold text-slate-900 dark:text-white mb-1" id="qrTitle">QR Code</h3>
+            <p class="text-xs text-slate-400 dark:text-slate-500 mb-6" id="qrSubtitle">สแกนเพื่อรับฟังเสียงคำแนะนำ</p>
+            
+            <div class="p-4 bg-white rounded-2xl shadow-inner inline-block mx-auto mb-6">
+                <div id="qrcodeBox" class="flex justify-center"></div>
+            </div>
+
+            <div class="space-y-2">
+                <button onclick="window.print()" class="w-full bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white font-semibold py-3 px-4 rounded-xl shadow-md shadow-teal-500/20 transition text-xs flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    <span>พิมพ์หน้านี้ / พิมพ์ QR Code</span>
+                </button>
+                <button onclick="closeQR()" class="w-full text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white py-2 text-xs font-medium transition">
+                    ปิด
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // กำหนด URL ของหน้าผู้ป่วย
+        const PATIENT_URL = window.location.href.replace('admin.html', 'index.html');
+        let db = JSON.parse(localStorage.getItem('hospital_db')) || {};
+
+        // --- Session System (1 Day = 24 Hours Fixed Lifetime) ---
+        const SESSION_DURATION_MS = 24 * 60 * 60 * 1000; // 1 วัน = 86,400,000 มิลลิวินาที
+        let sessionTimerInterval = null;
+
+        function getSession() {
+            try {
+                const s = localStorage.getItem('admin_session_auth');
+                return s ? JSON.parse(s) : null;
+            } catch(e) {
+                return null;
+            }
+        }
+
+        function setSession() {
+            const now = Date.now();
+            const sessionData = {
+                authenticated: true,
+                loginTime: now,
+                expiresAt: now + SESSION_DURATION_MS // กำหนดเวลาหมดอายุตายตัว 1 วันข้างหน้า
+            };
+            localStorage.setItem('admin_session_auth', JSON.stringify(sessionData));
+        }
+
+        function clearSession() {
+            localStorage.removeItem('admin_session_auth');
+            if (sessionTimerInterval) clearInterval(sessionTimerInterval);
+        }
+
+        function checkSessionValidity() {
+            const session = getSession();
+            if (!session || !session.authenticated) {
+                return false;
+            }
+            const now = Date.now();
+            // ตรวจสอบหากเป็นเซสชันเก่า (1 ชั่วโมง) ให้อัปเดตเป็น 1 วันอัตโนมัติ
+            if (session.expiresAt && session.expiresAt - session.loginTime < SESSION_DURATION_MS) {
+                session.expiresAt = session.loginTime + SESSION_DURATION_MS;
+                localStorage.setItem('admin_session_auth', JSON.stringify(session));
+            }
+
+            if (now >= session.expiresAt) {
+                // ครบกำหนด 1 วัน
+                clearSession();
+                return false;
+            }
+            return true;
+        }
+
+        function startSessionTimer() {
+            if (sessionTimerInterval) clearInterval(sessionTimerInterval);
+            sessionTimerInterval = setInterval(() => {
+                if (!checkSessionValidity()) {
+                    handleSessionExpired();
+                }
+            }, 5000);
+        }
+
+        function handleSessionExpired() {
+            clearSession();
+            document.getElementById('dashboardSection').classList.add('hidden');
+            document.getElementById('loginSection').classList.remove('hidden');
+            document.getElementById('sessionTimeoutNotice').classList.remove('hidden');
+            document.getElementById('passwordInput').value = '';
+        }
+
+        // --- Login & Logout ---
+        function checkLogin() {
+            const pwd = document.getElementById('passwordInput').value.trim();
+            if (pwd === '1234') {
+                document.getElementById('loginError').classList.add('hidden');
+                document.getElementById('sessionTimeoutNotice').classList.add('hidden');
+                setSession();
+                showDashboard();
+            } else {
+                document.getElementById('loginError').classList.remove('hidden');
+            }
+        }
+
+        function logout() {
+            clearSession();
+            document.getElementById('loginSection').classList.remove('hidden');
+            document.getElementById('dashboardSection').classList.add('hidden');
+            document.getElementById('passwordInput').value = '';
+        }
+
+        function showDashboard() {
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('dashboardSection').classList.remove('hidden');
+            startSessionTimer();
+            fetchInstructions();
+        }
+
+        // --- Theme Switcher Logic ---
+        function initTheme() {
+            const savedTheme = localStorage.getItem('app_theme');
+            if (savedTheme === 'light') {
+                document.documentElement.classList.remove('dark');
+            } else if (savedTheme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+                    document.documentElement.classList.remove('dark');
+                } else {
+                    document.documentElement.classList.add('dark');
+                }
+            }
+            updateThemeIcons();
+        }
+
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('app_theme', isDark ? 'dark' : 'light');
+            updateThemeIcons();
+        }
+
+        function updateThemeIcons() {
+            const isDark = document.documentElement.classList.contains('dark');
+            const sunIcon = document.getElementById('sunIcon');
+            const moonIcon = document.getElementById('moonIcon');
+            if (isDark) {
+                sunIcon.classList.remove('hidden');
+                moonIcon.classList.add('hidden');
+            } else {
+                sunIcon.classList.add('hidden');
+                moonIcon.classList.remove('hidden');
+            }
+        }
+        initTheme();
+
+        // ตรวจสอบสถานะการเข้าสู่ระบบเมื่อโหลดหน้าเว็บ
+        window.addEventListener('DOMContentLoaded', () => {
+            if (checkSessionValidity()) {
+                showDashboard();
+            } else {
+                clearSession();
+            }
+        });
+
+        // --- Form & Record Operations ---
+        function toggleAudioInput() {
+            const isTTS = document.querySelector('input[name="audioType"]:checked').value === 'tts';
+            document.getElementById('ttsInputBox').classList.toggle('hidden', !isTTS);
+            document.getElementById('mp3InputBox').classList.toggle('hidden', isTTS);
+        }
+
+        function checkDuplicateId() {
+            const id = document.getElementById('recordId').value.trim();
+            const warning = document.getElementById('idWarning');
+            const saveBtn = document.getElementById('saveBtn');
+            
+            if (db[id]) {
+                warning.classList.remove('hidden');
+                saveBtn.disabled = true;
+                saveBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                warning.classList.add('hidden');
+                saveBtn.disabled = false;
+                saveBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        // โหลดข้อมูลจาก SQLite API (พร้อม Fallback ไป localStorage หากไม่ได้เปิด Server)
+        async function fetchInstructions() {
+            try {
+                const res = await fetch('/api/instructions');
+                if (res.ok) {
+                    const data = await res.json();
+                    db = data;
+                    localStorage.setItem('hospital_db', JSON.stringify(db));
+                }
+            } catch (err) {
+                console.warn("เซิร์ฟเวอร์ SQLite ยังไม่เปิดใช้งาน กำลังใช้ข้อมูลจาก localStorage แทน");
+            }
+            renderList();
+        }
+
+        async function saveRecord() {
+            const id = document.getElementById('recordId').value.trim();
+            const title = document.getElementById('recordTitle').value.trim();
+            const type = document.querySelector('input[name="audioType"]:checked').value;
+            
+            if (!id || !title) return alert("กรุณากรอก ID และหัวข้อคำแนะนำให้ครบถ้วน");
+
+            const newRecord = { id, title, type, text: "", audioBase64: "" };
+
+            if (type === 'tts') {
+                newRecord.text = document.getElementById('ttsText').value.trim();
+                if (!newRecord.text) return alert("กรุณากรอกข้อความที่จะให้อ่านออกเสียง");
+                await saveToDB(id, newRecord);
+            } else {
+                const file = document.getElementById('mp3File').files[0];
+                if (!file) return alert("กรุณาเลือกไฟล์เสียง MP3");
+                
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    newRecord.audioBase64 = e.target.result;
+                    await saveToDB(id, newRecord);
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        async function saveToDB(id, data) {
+            // ส่งบันทึกลง SQLite
+            try {
+                const res = await fetch('/api/instructions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, ...data })
+                });
+                if (res.ok) {
+                    console.log("บันทึกลง SQLite สำเร็จ");
+                }
+            } catch (err) {
+                console.warn("ไม่สามารถติดต่อ SQLite Server ได้ บันทึกเฉพาะในเบราว์เซอร์");
+            }
+
+            db[id] = data;
+            localStorage.setItem('hospital_db', JSON.stringify(db));
+            alert("บันทึกข้อมูลเรียบร้อยแล้ว (SQLite)");
+            document.getElementById('recordId').value = '';
+            document.getElementById('recordTitle').value = '';
+            document.getElementById('ttsText').value = '';
+            document.getElementById('mp3File').value = '';
+            fetchInstructions();
+        }
+
+        async function deleteRecord(id) {
+            if(confirm(`ต้องการลบข้อมูลคำแนะนำ "${id}" ใช่หรือไม่?`)) {
+                try {
+                    await fetch(`/api/instructions/${encodeURIComponent(id)}`, { method: 'DELETE' });
+                } catch(err) {
+                    console.warn("SQLite delete error:", err);
+                }
+                delete db[id];
+                localStorage.setItem('hospital_db', JSON.stringify(db));
+                fetchInstructions();
+            }
+        }
+
+        function renderList() {
+            const list = document.getElementById('recordsList');
+            list.innerHTML = '';
+            const keys = Object.keys(db);
+            
+            if (keys.length === 0) {
+                list.innerHTML = `
+                    <div class="text-center py-12 text-slate-400 dark:text-slate-500 text-sm font-normal">
+                        ยังไม่มีข้อมูลคำแนะนำในระบบ กรุณากรอกแบบฟอร์มด้านบนเพื่อเพิ่มรายการใหม่
+                    </div>
+                `;
+                return;
+            }
+
+            for (let id of keys) {
+                const item = db[id];
+                const typeBadge = item.type === 'tts' 
+                    ? '<span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200/50 dark:border-teal-800/40">TTS (ระบบอ่าน)</span>'
+                    : '<span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-800/40">MP3</span>';
+
+                list.innerHTML += `
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 rounded-2xl glass-card border border-teal-100/60 dark:border-slate-800 hover:border-teal-300 dark:hover:border-teal-700/60 transition gap-4">
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2.5 flex-wrap">
+                                <h3 class="font-bold text-base text-slate-900 dark:text-white">${item.title}</h3>
+                                ${typeBadge}
+                            </div>
+                            <p class="text-xs text-slate-400 dark:text-slate-500 font-mono">ID: ${id}</p>
+                        </div>
+                        <div class="flex items-center gap-2 self-end sm:self-auto">
+                            <button onclick="showQR('${id}')" class="px-4 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white font-medium text-xs shadow-sm shadow-teal-500/20 transition flex items-center gap-1.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                                </svg>
+                                <span>QR Code</span>
+                            </button>
+                            <button onclick="deleteRecord('${id}')" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 dark:bg-slate-800 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 text-slate-600 dark:text-slate-300 font-medium text-xs transition flex items-center gap-1">
+                                <span>ลบ</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        let qrcodeObj = null;
+        function showQR(id) {
+            document.getElementById('qrModal').classList.remove('hidden');
+            document.getElementById('qrTitle').innerText = "QR Code: " + (db[id]?.title || id);
+            document.getElementById('qrSubtitle').innerText = `ID: ${id} • สแกนเพื่อรับฟังเสียงคำแนะนำ`;
+            
+            const url = `${PATIENT_URL}?id=${id}`;
+            const qrBox = document.getElementById('qrcodeBox');
+            qrBox.innerHTML = '';
+
+            qrcodeObj = new QRCode(qrBox, {
+                text: url,
+                width: 200,
+                height: 200,
+                colorDark : "#0f172a",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+        }
+
+        function closeQR() {
+            document.getElementById('qrModal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

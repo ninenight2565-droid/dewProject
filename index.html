@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบคำแนะนำการดูแลตนเองสำหรับผู้ป่วย</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    animation: {
+                        'laser': 'laser 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        laser: {
+                            '0%, 100%': { top: '6%', opacity: '0.3' },
+                            '50%': { top: '92%', opacity: '0.95' },
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-12px)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        /* Glassmorphism Classes with Teal Tint */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.05), 0 0 25px rgba(20, 184, 166, 0.08);
+        }
+        .dark .glass-card {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.45), 0 0 30px rgba(20, 184, 166, 0.12);
+        }
+
+        /* Ambient Glowing Backdrop */
+        .subtle-mesh {
+            background-color: #f0fdfa; /* teal-50 */
+        }
+        .dark .subtle-mesh {
+            background-color: #022c22; /* teal-950 */
+        }
+
+        /* Sound ripple */
+        @keyframes sound-wave {
+            0% { transform: scale(0.96); opacity: 0.6; }
+            100% { transform: scale(1.4); opacity: 0; }
+        }
+        .sound-wave-active::before {
+            content: '';
+            position: absolute;
+            inset: -8px;
+            border-radius: 9999px;
+            background: radial-gradient(circle, rgba(20, 184, 166, 0.4) 0%, rgba(16, 185, 129, 0.15) 70%, transparent 100%);
+            animation: sound-wave 1.6s ease-out infinite;
+            z-index: 0;
+        }
+
+        #reader video {
+            border-radius: 1.5rem;
+            object-fit: cover;
+            width: 100% !important;
+            height: 100% !important;
+        }
+        #reader {
+            border: none !important;
+        }
+    </style>
+</head>
+<body class="subtle-mesh min-h-screen text-slate-800 dark:text-slate-100 flex flex-col items-center justify-between p-4 sm:p-8 transition-colors duration-300 font-sans selection:bg-teal-500 selection:text-white relative overflow-x-hidden">
+
+    <!-- Ambient Floating Orbs Background -->
+    <div class="fixed inset-0 pointer-events-none overflow-hidden -z-10">
+        <div class="absolute -top-32 -left-32 w-96 h-96 bg-teal-400/25 dark:bg-teal-600/20 rounded-full blur-3xl animate-float"></div>
+        <div class="absolute top-1/2 -right-32 w-[28rem] h-[28rem] bg-emerald-400/20 dark:bg-emerald-600/15 rounded-full blur-3xl animate-float" style="animation-delay: -3s;"></div>
+        <div class="absolute -bottom-32 left-1/3 w-[26rem] h-[26rem] bg-cyan-400/20 dark:bg-cyan-500/15 rounded-full blur-3xl animate-float" style="animation-delay: -1.5s;"></div>
+    </div>
+
+    <!-- Top Bar (Full Width Expansive) -->
+    <header class="w-full max-w-5xl flex justify-between items-center py-2">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-teal-500 to-emerald-400 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-teal-500/30">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-base font-bold tracking-tight text-teal-950 dark:text-white leading-tight">ระบบคำแนะนำผู้ป่วย</h1>
+                <p class="text-xs text-teal-700 dark:text-teal-400">ศูนย์ข้อมูลและเสียงคำแนะนำการดูแลตนเอง</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2.5">
+            <button id="themeToggleBtn" onclick="toggleTheme()" class="w-10 h-10 rounded-2xl glass-card flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition" title="สลับโหมด มืด/สว่าง">
+                <svg id="moonIcon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+                <svg id="sunIcon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+            </button>
+            <a href="admin.html" class="h-10 px-4 rounded-2xl glass-card flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition">
+                <span>จัดการข้อมูล</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Expansive Container -->
+    <main class="w-full max-w-5xl my-auto py-6">
+
+        <!-- Screen 1: Scan View (Expansive & Clean) -->
+        <div id="scanBox" class="glass-card p-8 sm:p-14 rounded-[2.5rem] text-center transition-all duration-300">
+            
+            <div class="max-w-2xl mx-auto mb-8">
+                <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 mb-3">สแกนรหัสคิวอาร์</span>
+                <h2 class="text-2xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-3">รับฟังคำแนะนำการดูแลตนเอง</h2>
+                <p class="text-sm sm:text-base text-slate-500 dark:text-slate-400 font-normal leading-relaxed">
+                    ส่องกล้องที่รหัส QR บนเอกสารหรือซองยาเพื่อเริ่มรับฟังเสียงอธิบายคำแนะนำ
+                </p>
+            </div>
+
+            <!-- Scanner Camera Box with Minimal White Framing -->
+            <div id="cameraWrapper" class="relative w-full aspect-square max-w-sm sm:max-w-md mx-auto mb-8 hidden rounded-3xl overflow-hidden bg-black shadow-lg">
+                <div id="reader" class="w-full h-full"></div>
+
+                <!-- Modern Minimal Target Reticle Overlay -->
+                <div id="scannerOverlay" class="absolute inset-0 pointer-events-none flex flex-col items-center justify-between p-6 z-20">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-black/60 backdrop-blur-md text-white/90 text-xs font-medium">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                        <span>กำลังตรวจจับ QR Code</span>
+                    </div>
+
+                    <!-- Clean 4-corner minimalist reticle -->
+                    <div class="relative w-64 h-64 sm:w-72 sm:h-72 my-auto flex items-center justify-center">
+                    <!-- Laser scanning line (Teal Neon) -->
+                        <div class="absolute left-3 right-3 h-[3px] bg-gradient-to-r from-transparent via-teal-400 to-transparent shadow-[0_0_15px_#14b8a6] animate-laser z-20"></div>
+
+                        <!-- 4 Corner Brackets (Teal) -->
+                        <div class="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-teal-400 rounded-tl-xl shadow-[0_0_10px_rgba(20,184,166,0.6)]"></div>
+                        <div class="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-teal-400 rounded-tr-xl shadow-[0_0_10px_rgba(20,184,166,0.6)]"></div>
+                        <div class="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-teal-400 rounded-bl-xl shadow-[0_0_10px_rgba(20,184,166,0.6)]"></div>
+                        <div class="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-teal-400 rounded-br-xl shadow-[0_0_10px_rgba(20,184,166,0.6)]"></div>
+
+                        <!-- Center crosshair -->
+                        <div class="w-2 h-2 rounded-full bg-teal-400"></div>
+                    </div>
+
+                    <p class="text-[11px] text-white/85 bg-black/60 backdrop-blur-sm px-3.5 py-1 rounded-full">
+                        จัดรหัส QR Code ให้อยู่ภายในกรอบ
+                    </p>
+                </div>
+            </div>
+
+            <!-- Action Controls -->
+            <div class="max-w-md mx-auto space-y-3">
+                <button id="startScanBtn" onclick="startScanner()" class="w-full bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white font-bold py-4 px-6 rounded-2xl shadow-lg shadow-teal-500/25 active:scale-[0.99] transition flex items-center justify-center gap-3 text-base">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>เปิดกล้องสแกน QR Code</span>
+                </button>
+
+                <button id="stopScanBtn" onclick="stopScanner()" class="w-full hidden bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 font-medium py-3.5 px-6 rounded-2xl transition text-sm">
+                    ปิดกล้อง
+                </button>
+            </div>
+        </div>
+
+        <!-- Screen 2: Audio Player View (Expansive & Clean) -->
+        <div id="contentBox" class="glass-card p-8 sm:p-14 rounded-[2.5rem] text-center hidden transition-all duration-300">
+            
+            <div class="relative w-24 h-24 mx-auto mb-6 flex items-center justify-center" id="speakerContainer">
+                <div class="relative z-10 w-20 h-20 rounded-3xl bg-gradient-to-tr from-teal-500 to-emerald-400 text-white flex items-center justify-center shadow-lg shadow-teal-500/30" id="speakerIcon">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15.536 8.464a5 5 0 010 7.072M18.364 5.636a9 9 0 010 12.728M11 5L6 9H2v6h4l5 4V5z" />
+                    </svg>
+                </div>
+            </div>
+
+            <div class="max-w-2xl mx-auto bg-white/70 dark:bg-slate-900/60 border border-teal-500/20 dark:border-teal-500/10 rounded-3xl p-6 sm:p-8 mb-8 shadow-sm">
+                <span class="inline-block px-3 py-1 rounded-full bg-teal-500/15 text-teal-700 dark:text-teal-300 text-xs font-semibold mb-3">คำแนะนำผู้ป่วย</span>
+                <h2 id="patientTitle" class="text-2xl sm:text-3xl font-extrabold text-teal-950 dark:text-white leading-snug mb-3">...</h2>
+                <div id="statusText" class="text-sm text-slate-500 dark:text-slate-400 flex items-center justify-center gap-2">
+                    <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                    <span>พร้อมเปิดฟังเสียง</span>
+                </div>
+            </div>
+
+            <div class="max-w-md mx-auto space-y-3">
+                <button id="playBtn" onclick="playAudio()" class="w-full bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white font-bold py-4 px-6 rounded-2xl shadow-lg shadow-teal-500/25 active:scale-[0.99] transition flex items-center justify-center gap-2.5 text-base">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span id="playBtnText">ฟังเสียงคำแนะนำ</span>
+                </button>
+
+                <button onclick="resetApp()" class="w-full bg-teal-500/10 hover:bg-teal-500/20 text-teal-800 dark:text-teal-200 border border-teal-500/20 font-medium py-3.5 px-6 rounded-2xl transition text-sm flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span>สแกนรายการอื่น</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- หน้าจอ 3: กรณีหาข้อมูลไม่พบ -->
+        <div id="errorBox" class="glass-card p-8 sm:p-12 rounded-[2.5rem] text-center hidden transition-all duration-300">
+            <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-2">ไม่พบข้อมูลคำแนะนำ</h2>
+            <p class="text-slate-500 dark:text-slate-400 text-sm max-w-sm mx-auto mb-6">
+                รหัส QR Code นี้ยังไม่ได้ลงทะเบียนในระบบ หรือข้อมูลอาจถูกลบไปแล้ว
+            </p>
+            <button onclick="resetApp()" class="max-w-xs w-full mx-auto bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 font-medium py-3 px-6 rounded-2xl transition text-sm">
+                กลับไปสแกนใหม่
+            </button>
+        </div>
+    </main>
+
+    <audio id="mp3Player" class="hidden"></audio>
+
+    <footer class="w-full max-w-5xl py-3 text-center text-xs text-slate-400 dark:text-slate-500">
+        ระบบข้อมูลคำแนะนำการดูแลตนเองสำหรับผู้ป่วย
+    </footer>
+
+    <script>
+        let db = JSON.parse(localStorage.getItem('hospital_db')) || {};
+        let currentRecord = null;
+        let html5QrCode = null;
+
+        // --- Theme Switcher Logic ---
+        function initTheme() {
+            const savedTheme = localStorage.getItem('app_theme');
+            if (savedTheme === 'light') {
+                document.documentElement.classList.remove('dark');
+            } else if (savedTheme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+                    document.documentElement.classList.remove('dark');
+                } else {
+                    document.documentElement.classList.add('dark');
+                }
+            }
+            updateThemeIcons();
+        }
+
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('app_theme', isDark ? 'dark' : 'light');
+            updateThemeIcons();
+        }
+
+        function updateThemeIcons() {
+            const isDark = document.documentElement.classList.contains('dark');
+            const sunIcon = document.getElementById('sunIcon');
+            const moonIcon = document.getElementById('moonIcon');
+            if (isDark) {
+                sunIcon.classList.remove('hidden');
+                moonIcon.classList.add('hidden');
+            } else {
+                sunIcon.classList.add('hidden');
+                moonIcon.classList.remove('hidden');
+            }
+        }
+        initTheme();
+
+        // ตรวจสอบ URL query parameter ทันทีเมื่อเปิดเว็บ
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const idParam = urlParams.get('id');
+            if (idParam) {
+                loadPatientData(idParam);
+            }
+        });
+
+        // เริ่มต้นการสแกนกล้องพร้อมกรอบช่วยเล็ง
+        async function startScanner() {
+            document.getElementById('startScanBtn').classList.add('hidden');
+            document.getElementById('stopScanBtn').classList.remove('hidden');
+            document.getElementById('cameraWrapper').classList.remove('hidden');
+
+            try {
+                if (!html5QrCode) {
+                    html5QrCode = new Html5Qrcode("reader");
+                }
+
+                const config = {
+                    fps: 15,
+                    qrbox: (viewfinderWidth, viewfinderHeight) => {
+                        const edgeSize = Math.min(viewfinderWidth, viewfinderHeight) * 0.75;
+                        return { width: Math.floor(edgeSize), height: Math.floor(edgeSize) };
+                    },
+                    aspectRatio: 1.0
+                };
+
+                const onScanSuccess = (decodedText) => {
+                    if (navigator.vibrate) navigator.vibrate(100);
+                    stopScanner();
+                    processScan(decodedText);
+                };
+
+                const onScanError = (errorMessage) => {
+                    // กำลังค้นหา QR (ไม่ต้องทำอะไร)
+                };
+
+                // ลองเปิดกล้องหลังก่อน ถ้าไม่สำเร็จให้เปิดกล้องตัวแรกที่มี
+                try {
+                    await html5QrCode.start(
+                        { facingMode: "environment" },
+                        config,
+                        onScanSuccess,
+                        onScanError
+                    );
+                } catch (facingModeErr) {
+                    console.warn("ไม่สามารถเปิดด้วย facingMode environment ได้ กำลังดึงรายชื่อกล้อง...", facingModeErr);
+                    const devices = await Html5Qrcode.getCameras();
+                    if (devices && devices.length > 0) {
+                        const cameraId = devices[devices.length - 1].id; // มักเป็นกล้องหลัง
+                        await html5QrCode.start(
+                            cameraId,
+                            config,
+                            onScanSuccess,
+                            onScanError
+                        );
+                    } else {
+                        throw new Error("ไม่พบอุปกรณ์กล้องในเครื่องของคุณ");
+                    }
+                }
+            } catch (err) {
+                console.error("Camera error:", err);
+                let message = "ไม่สามารถเปิดกล้องได้: ";
+                if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                    message += "เบราว์เซอร์อนุญาตให้เปิดกล้องได้เฉพาะบน HTTPS หรือ localhost เท่านั้น";
+                } else if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    message += "กรุณากด 'อนุญาต (Allow)' ให้เบราว์เซอร์เข้าถึงกล้อง";
+                } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                    message += "ไม่พบอุปกรณ์กล้องบนเครื่องนี้";
+                } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+                    message += "กล้องอาจถูกใช้งานโดยแอปพลิเคชันอื่นอยู่ กรุณาปิดแอปอื่นแล้วลองใหม่";
+                } else {
+                    message += (err.message || err || "กรุณาตรวจสอบสิทธิ์การเข้าถึงกล้อง");
+                }
+                alert(message);
+                resetApp();
+            }
+        }
+
+        // หยุดการสแกนกล้อง
+        function stopScanner() {
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().then(() => {
+                    document.getElementById('cameraWrapper').classList.add('hidden');
+                    document.getElementById('startScanBtn').classList.remove('hidden');
+                    document.getElementById('stopScanBtn').classList.add('hidden');
+                }).catch(err => {
+                    console.log(err);
+                    document.getElementById('cameraWrapper').classList.add('hidden');
+                    document.getElementById('startScanBtn').classList.remove('hidden');
+                    document.getElementById('stopScanBtn').classList.add('hidden');
+                });
+            } else {
+                document.getElementById('cameraWrapper').classList.add('hidden');
+                document.getElementById('startScanBtn').classList.remove('hidden');
+                document.getElementById('stopScanBtn').classList.add('hidden');
+            }
+        }
+
+        // จัดการลิงก์ URL ที่สแกนได้
+        function processScan(text) {
+            let scannedId = null;
+            try {
+                let url = new URL(text);
+                scannedId = url.searchParams.get("id");
+            } catch(e) {
+                scannedId = text.trim();
+            }
+
+            if(scannedId) {
+                loadPatientData(scannedId);
+            } else {
+                alert("รูปแบบ QR Code ไม่ถูกต้อง");
+                resetApp();
+            }
+        }
+
+        // โหลดข้อมูลและเล่นเสียง
+        async function loadPatientData(id) {
+            document.getElementById('scanBox').classList.add('hidden');
+            let data = null;
+
+            // 1. ลองดึงจาก SQLite API ก่อน
+            try {
+                const res = await fetch(`/api/instructions/${encodeURIComponent(id)}`);
+                if (res.ok) {
+                    data = await res.json();
+                }
+            } catch (err) {
+                console.warn("ไม่สามารถเชื่อมต่อ SQLite API ได้ กำลังอ่านจากแคชในเครื่อง");
+            }
+
+            // 2. ถ้าดึงจาก API ไม่ได้ ให้ดึงจาก localStorage
+            if (!data) {
+                const localDb = JSON.parse(localStorage.getItem('hospital_db')) || {};
+                data = localDb[id];
+            }
+            
+            if (data) {
+                currentRecord = data;
+                document.getElementById('errorBox').classList.add('hidden');
+                document.getElementById('contentBox').classList.remove('hidden');
+                document.getElementById('patientTitle').innerText = currentRecord.title;
+                
+                if (currentRecord.type === 'mp3') {
+                    const player = document.getElementById('mp3Player');
+                    player.src = currentRecord.audioBase64;
+                    player.onended = stopAnimation;
+                }
+                
+                // สั่งเล่นเสียงทันทีหลังสแกนเสร็จ
+                playAudio(); 
+            } else {
+                document.getElementById('contentBox').classList.add('hidden');
+                document.getElementById('errorBox').classList.remove('hidden');
+            }
+        }
+
+        function playAudio() {
+            if (!currentRecord) return;
+            startAnimation();
+
+            if (currentRecord.type === 'tts') {
+                window.speechSynthesis.cancel(); 
+                const utterance = new SpeechSynthesisUtterance(currentRecord.text);
+                utterance.lang = 'th-TH';
+                utterance.rate = 0.95;
+                utterance.onend = stopAnimation;
+                utterance.onerror = stopAnimation;
+                window.speechSynthesis.speak(utterance);
+            } else if (currentRecord.type === 'mp3') {
+                const player = document.getElementById('mp3Player');
+                player.currentTime = 0;
+                player.play().catch(e => {
+                    console.log("Auto-play error:", e);
+                    stopAnimation();
+                });
+            }
+        }
+
+        function resetApp() {
+            window.speechSynthesis.cancel();
+            const player = document.getElementById('mp3Player');
+            player.pause();
+            stopAnimation();
+            
+            document.getElementById('contentBox').classList.add('hidden');
+            document.getElementById('errorBox').classList.add('hidden');
+            document.getElementById('scanBox').classList.remove('hidden');
+            stopScanner();
+        }
+
+        function startAnimation() {
+            document.getElementById('speakerContainer').classList.add('sound-wave-active');
+            document.getElementById('statusText').innerHTML = '<span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> <span class="text-slate-900 dark:text-white font-medium">กำลังเล่นเสียงคำแนะนำ...</span>';
+            document.getElementById('playBtnText').innerText = "ฟังซ้ำอีกครั้ง";
+        }
+
+        function stopAnimation() {
+            document.getElementById('speakerContainer').classList.remove('sound-wave-active');
+            document.getElementById('statusText').innerHTML = '<span class="inline-block w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600"></span> <span>จบการเล่นเสียง</span>';
+        }
+    </script>
+</body>
+</html>

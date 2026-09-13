@@ -617,36 +617,20 @@
         }
 
         function renderQRCodeForId(id, baseUrl) {
-            const item = db[id];
             let finalUrl = baseUrl;
-
-            // ถ้ามีข้อมูล ให้ฝัง payload ย่อไปด้วย เพื่อให้มือถือเครื่องอื่นที่ไม่มี localStorage อ่านได้ทันที 100%
-            if (item) {
-                // สร้าง payload กะทัดรัด
-                const payloadObj = {
-                    id: id,
-                    t: item.title,
-                    type: item.type,
-                    txt: item.text || ''
-                };
-                const encodedPayload = encodeURIComponent(JSON.stringify(payloadObj));
-                const separator = finalUrl.includes('?') ? '&' : '?';
-                finalUrl = `${finalUrl}${separator}id=${encodeURIComponent(id)}&d=${encodedPayload}`;
-            } else {
-                const separator = finalUrl.includes('?') ? '&' : '?';
-                finalUrl = `${finalUrl}${separator}id=${encodeURIComponent(id)}`;
-            }
+            const separator = finalUrl.includes('?') ? '&' : '?';
+            finalUrl = `${finalUrl}${separator}id=${encodeURIComponent(id)}`;
 
             const qrBox = document.getElementById('qrcodeBox');
             qrBox.innerHTML = '';
 
             qrcodeObj = new QRCode(qrBox, {
                 text: finalUrl,
-                width: 210,
-                height: 210,
+                width: 220,
+                height: 220,
                 colorDark : "#0f172a",
                 colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.M
+                correctLevel : QRCode.CorrectLevel.H
             });
         }
 

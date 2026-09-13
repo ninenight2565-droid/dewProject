@@ -404,25 +404,10 @@
         }
 
         // โหลดข้อมูลและเล่นเสียง
-        async function loadPatientData(id) {
+        function loadPatientData(id) {
             document.getElementById('scanBox').classList.add('hidden');
-            let data = null;
-
-            // 1. ลองดึงจาก SQLite API ก่อน
-            try {
-                const res = await fetch(`/api/instructions/${encodeURIComponent(id)}`);
-                if (res.ok) {
-                    data = await res.json();
-                }
-            } catch (err) {
-                console.warn("ไม่สามารถเชื่อมต่อ SQLite API ได้ กำลังอ่านจากแคชในเครื่อง");
-            }
-
-            // 2. ถ้าดึงจาก API ไม่ได้ ให้ดึงจาก localStorage
-            if (!data) {
-                const localDb = JSON.parse(localStorage.getItem('hospital_db')) || {};
-                data = localDb[id];
-            }
+            const localDb = JSON.parse(localStorage.getItem('hospital_db')) || {};
+            const data = localDb[id];
             
             if (data) {
                 currentRecord = data;

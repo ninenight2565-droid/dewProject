@@ -225,8 +225,14 @@
             <h3 class="text-base font-bold text-slate-900 dark:text-white mb-1" id="qrTitle">QR Code</h3>
             <p class="text-xs text-slate-400 dark:text-slate-500 mb-6" id="qrSubtitle">สแกนเพื่อรับฟังเสียงคำแนะนำ</p>
             
-            <div class="p-4 bg-white rounded-2xl shadow-inner inline-block mx-auto mb-6">
+            <div class="p-4 bg-white rounded-2xl shadow-inner inline-block mx-auto mb-4">
                 <div id="qrcodeBox" class="flex justify-center"></div>
+            </div>
+
+            <div class="mb-5 text-left">
+                <label class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">ลิงก์เว็บที่สแกนแล้วจะเปิด (Web URL):</label>
+                <input type="text" id="qrTargetUrl" class="w-full px-3 py-2 rounded-xl glass-input text-xs text-slate-700 dark:text-slate-200 font-mono" placeholder="https://your-site.netlify.app" oninput="refreshCurrentQR()">
+                <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-1">สามารถใส่โดเมนเว็บจริงของคุณ เช่น บน Netlify เพื่อให้สแกนจากมือถือได้ทันที</p>
             </div>
 
             <div class="space-y-2">
@@ -244,8 +250,18 @@
     </div>
 
     <script>
-        // กำหนด URL ของหน้าผู้ป่วย
-        const PATIENT_URL = window.location.href.replace('admin.html', 'index.html');
+        // คำนวณ Base URL สำหรับหน้าผู้ป่วย
+        function getPatientBaseUrl() {
+            const savedUrl = localStorage.getItem('qr_target_base_url');
+            if (savedUrl && savedUrl.trim()) {
+                return savedUrl.trim();
+            }
+            if (window.location.protocol === 'file:') {
+                return window.location.href.replace('admin.html', 'index.html');
+            }
+            // ถ้าเปิดผ่านเว็บ เช่น https://dewproject.netlify.app/admin.html
+            return `${window.location.origin}/index.html`;
+        }
         let db = JSON.parse(localStorage.getItem('hospital_db')) || {};
 
         // --- Session System (1 Day = 24 Hours Fixed Lifetime) ---
@@ -337,7 +353,7 @@
             document.getElementById('loginSection').classList.add('hidden');
             document.getElementById('dashboardSection').classList.remove('hidden');
             startSessionTimer();
-            fetchInstructions();
+            renderList();
         }
 
         // --- Theme Switcher Logic ---
@@ -409,22 +425,7 @@
             }
         }
 
-        // โหลดข้อมูลจาก SQLite API (พร้อม Fallback ไป localStorage หากไม่ได้เปิด Server)
-        async function fetchInstructions() {
-            try {
-                const res = await fetch('/api/instructions');
-                if (res.ok) {
-                    const data = await res.json();
-                    db = data;
-                    localStorage.setItem('hospital_db', JSON.stringify(db));
-                }
-            } catch (err) {
-                console.warn("เซิร์ฟเวอร์ SQLite ยังไม่เปิดใช้งาน กำลังใช้ข้อมูลจาก localStorage แทน");
-            }
-            renderList();
-        }
-
-        async function saveRecord() {
+        function saveRecord() {
             const id = document.getElementById('recordId').value.trim();
             const title = document.getElementById('recordTitle').value.trim();
             const type = document.querySelector('input[name="audioType"]:checked').value;
@@ -436,55 +437,36 @@
             if (type === 'tts') {
                 newRecord.text = document.getElementById('ttsText').value.trim();
                 if (!newRecord.text) return alert("กรุณากรอกข้อความที่จะให้อ่านออกเสียง");
-                await saveToDB(id, newRecord);
+                saveToDB(id, newRecord);
             } else {
                 const file = document.getElementById('mp3File').files[0];
                 if (!file) return alert("กรุณาเลือกไฟล์เสียง MP3");
                 
                 const reader = new FileReader();
-                reader.onload = async function(e) {
+                reader.onload = function(e) {
                     newRecord.audioBase64 = e.target.result;
-                    await saveToDB(id, newRecord);
+                    saveToDB(id, newRecord);
                 };
                 reader.readAsDataURL(file);
             }
         }
 
-        async function saveToDB(id, data) {
-            // ส่งบันทึกลง SQLite
-            try {
-                const res = await fetch('/api/instructions', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id, ...data })
-                });
-                if (res.ok) {
-                    console.log("บันทึกลง SQLite สำเร็จ");
-                }
-            } catch (err) {
-                console.warn("ไม่สามารถติดต่อ SQLite Server ได้ บันทึกเฉพาะในเบราว์เซอร์");
-            }
-
+        function saveToDB(id, data) {
             db[id] = data;
             localStorage.setItem('hospital_db', JSON.stringify(db));
-            alert("บันทึกข้อมูลเรียบร้อยแล้ว (SQLite)");
+            alert("บันทึกข้อมูลเรียบร้อยแล้ว");
             document.getElementById('recordId').value = '';
             document.getElementById('recordTitle').value = '';
             document.getElementById('ttsText').value = '';
             document.getElementById('mp3File').value = '';
-            fetchInstructions();
+            renderList();
         }
 
-        async function deleteRecord(id) {
+        function deleteRecord(id) {
             if(confirm(`ต้องการลบข้อมูลคำแนะนำ "${id}" ใช่หรือไม่?`)) {
-                try {
-                    await fetch(`/api/instructions/${encodeURIComponent(id)}`, { method: 'DELETE' });
-                } catch(err) {
-                    console.warn("SQLite delete error:", err);
-                }
                 delete db[id];
                 localStorage.setItem('hospital_db', JSON.stringify(db));
-                fetchInstructions();
+                renderList();
             }
         }
 
@@ -534,17 +516,44 @@
         }
 
         let qrcodeObj = null;
+        let currentQRId = null;
+
         function showQR(id) {
+            currentQRId = id;
             document.getElementById('qrModal').classList.remove('hidden');
             document.getElementById('qrTitle').innerText = "QR Code: " + (db[id]?.title || id);
             document.getElementById('qrSubtitle').innerText = `ID: ${id} • สแกนเพื่อรับฟังเสียงคำแนะนำ`;
-            
-            const url = `${PATIENT_URL}?id=${id}`;
+
+            const inputEl = document.getElementById('qrTargetUrl');
+            let baseUrl = getPatientBaseUrl();
+            inputEl.value = baseUrl;
+
+            renderQRCodeForId(id, baseUrl);
+        }
+
+        function refreshCurrentQR() {
+            if (!currentQRId) return;
+            const customUrl = document.getElementById('qrTargetUrl').value.trim();
+            if (customUrl) {
+                localStorage.setItem('qr_target_base_url', customUrl);
+            }
+            renderQRCodeForId(currentQRId, customUrl || getPatientBaseUrl());
+        }
+
+        function renderQRCodeForId(id, baseUrl) {
+            // สร้าง URL ที่ถูกต้อง ไม่ว่าจะเป็น https://domain.com/index.html?id=... หรือ https://domain.com/?id=...
+            let finalUrl = baseUrl;
+            if (finalUrl.includes('?')) {
+                finalUrl = `${finalUrl}&id=${encodeURIComponent(id)}`;
+            } else {
+                finalUrl = `${finalUrl}?id=${encodeURIComponent(id)}`;
+            }
+
             const qrBox = document.getElementById('qrcodeBox');
             qrBox.innerHTML = '';
 
             qrcodeObj = new QRCode(qrBox, {
-                text: url,
+                text: finalUrl,
                 width: 200,
                 height: 200,
                 colorDark : "#0f172a",

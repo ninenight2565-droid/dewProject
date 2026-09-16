@@ -509,7 +509,7 @@
             // 3. ดึงจากฐานข้อมูลคลาวด์ Netlify Blobs API (Realtime สดใหม่ 100%)
             if (!data && id) {
                 try {
-                    const res = await fetch('/api/instructions?id=' + encodeURIComponent(id) + '&v=' + Date.now());
+                    const res = await fetch('/.netlify/functions/api?id=' + encodeURIComponent(id) + '&v=' + Date.now());
                     if (res.ok) {
                         const cloudRecord = await res.json();
                         if (cloudRecord && !cloudRecord.error) {

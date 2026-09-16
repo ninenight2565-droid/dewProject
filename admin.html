@@ -512,7 +512,7 @@
 
             // 1. ส่งตรงเข้า Netlify Blobs Database แบบ Realtime
             try {
-                const res = await fetch('/api/instructions', {
+                const res = await fetch('/.netlify/functions/api', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ id, ...data })
@@ -558,7 +558,7 @@
             let loadedFromCloud = false;
             // ลองโหลดจาก Netlify Blobs API ก่อน
             try {
-                const res = await fetch('/api/instructions?v=' + Date.now());
+                const res = await fetch('/.netlify/functions/api?v=' + Date.now());
                 if (res.ok) {
                     const cloudData = await res.json();
                     if (cloudData && typeof cloudData === 'object' && !cloudData.error) {
@@ -626,7 +626,7 @@
                         localStorage.setItem('hospital_db', JSON.stringify(db));
                         // ส่งซิงค์ขึ้น Netlify Blobs ด้วย
                         try {
-                            await fetch('/api/instructions', {
+                            await fetch('/.netlify/functions/api', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify(db)
@@ -660,7 +660,7 @@
 
                 // ลบบน Netlify Blobs
                 try {
-                    await fetch('/api/instructions?id=' + encodeURIComponent(id), {
+                    await fetch('/.netlify/functions/api?id=' + encodeURIComponent(id), {
                         method: 'DELETE'
                     });
                 } catch(e) {}

@@ -239,7 +239,7 @@
             </div>
             <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-2">ไม่พบข้อมูลคำแนะนำ</h2>
             <p id="errorDetail" class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm max-w-md mx-auto mb-6">
-                รหัส QR Code นี้ยังไม่ได้บันทึกลงในฐานข้อมูล data.json บนเซิร์ฟเวอร์
+                ไม่พบข้อมูลคำแนะนำสำหรับรหัสนี้ หรือข้อมูลอาจถูกลบไปแล้ว กรุณาติดต่อเจ้าหน้าที่เพื่อขอรับคำแนะนำใหม่ครับ
             </p>
             <button onclick="resetApp()" class="max-w-xs w-full mx-auto bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 font-medium py-3 px-6 rounded-2xl transition text-sm">
                 กลับไปสแกนใหม่
@@ -563,9 +563,7 @@
                 // สั่งเล่นเสียงทันที
                 playAudio();
             } else {
-                const errorMsg = id 
-                    ? `ไม่พบข้อมูลสำหรับรหัส "${id}" ในฐานข้อมูล data.json บนเซิร์ฟเวอร์ กรุณาตรวจสอบว่าได้ทำการ push อัปเดตไฟล์ขึ้น GitHub แล้วหรือยัง`
-                    : `ไม่พบข้อมูลคำแนะนำ รหัส QR Code นี้อาจยังไม่ได้ลงทะเบียนในระบบ`;
+                const errorMsg = `ไม่พบข้อมูลคำแนะนำสำหรับรหัสนี้ หรือข้อมูลอาจถูกลบไปแล้ว กรุณาติดต่อเจ้าหน้าที่เพื่อขอรับคำแนะนำใหม่ครับ`;
                 document.getElementById('errorDetail').innerText = errorMsg;
                 document.getElementById('errorBox').classList.remove('hidden');
             }

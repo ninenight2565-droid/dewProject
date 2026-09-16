@@ -236,46 +236,42 @@
 
     <!-- Modal สำหรับแสดง QR Code Minimal Style -->
     <div id="qrModal" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-4">
-        <div class="glass-card p-6 sm:p-8 rounded-[2rem] text-center max-w-sm w-full shadow-2xl relative border border-white/80 dark:border-teal-800/30">
-            <h3 class="text-base font-bold text-slate-900 dark:text-white mb-1" id="qrTitle">QR Code</h3>
-            <p class="text-xs text-slate-400 dark:text-slate-500 mb-2" id="qrSubtitle">สแกนเพื่อรับฟังเสียงคำแนะนำ</p>
-            
-            <!-- สถานะของรายการในฐานข้อมูล -->
-            <div id="qrDbStatus" class="mb-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium"></div>
+        <div class="glass-card p-6 sm:p-8 rounded-[2.5rem] text-center max-w-sm w-full shadow-2xl relative border border-white/80 dark:border-teal-800/30">
+            <div class="w-12 h-12 mx-auto mb-3 rounded-2xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-300 flex items-center justify-center border border-teal-200/50 dark:border-teal-800/50">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                </svg>
+            </div>
 
-            <div class="p-4 bg-white rounded-2xl shadow-inner inline-block mx-auto mb-3">
+            <h3 class="text-lg font-extrabold text-slate-900 dark:text-white mb-1" id="qrTitle">QR Code</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-4" id="qrSubtitle">ใช้มือถือสแกนเพื่อฟังเสียงคำแนะนำ</p>
+
+            <!-- กล่องแสดง QR Code -->
+            <div class="p-4 bg-white rounded-3xl shadow-inner inline-block mx-auto mb-4 border border-slate-100">
                 <div id="qrcodeBox" class="flex justify-center"></div>
             </div>
 
-            <!-- ตัวเลือกโหมด QR Code -->
-            <div class="mb-4 text-left">
-                <label class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1.5">รูปแบบการทำงานของ QR Code:</label>
-                <div class="grid grid-cols-2 gap-2">
-                    <button type="button" id="qrModeStandardBtn" onclick="setQRMode('standard')" class="py-2 px-2.5 rounded-xl border text-xs font-medium transition text-center">
-                        โหมดมาตรฐาน (ID)
-                    </button>
-                    <button type="button" id="qrModeDirectBtn" onclick="setQRMode('direct')" class="py-2 px-2.5 rounded-xl border text-xs font-medium transition text-center">
-                        โหมดพกพา (Direct)
-                    </button>
+            <!-- คำอธิบายสำหรับผู้ใช้ทั่วไป (ภาษาคน) -->
+            <div class="mb-5 p-3.5 rounded-2xl bg-teal-50/70 dark:bg-teal-950/40 border border-teal-200/50 dark:border-teal-800/40 text-left">
+                <div class="flex items-center gap-2 text-teal-800 dark:text-teal-200 text-xs font-bold mb-1">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>พร้อมสแกนใช้งานได้ทันที</span>
                 </div>
-                <p id="qrModeDesc" class="text-[10px] text-slate-400 dark:text-slate-500 mt-1.5 leading-relaxed"></p>
+                <p class="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                    สามารถเปิดกล้องมือถือสแกนที่หน้าจอนี้ หรือกดปุ่ม <b>"พิมพ์ QR Code"</b> ด้านล่างเพื่อนำไปติดที่ซองยาหรือเอกสารผู้ป่วยได้เลยครับ
+                </p>
             </div>
 
-            <div class="mb-4 text-left">
-                <label class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">ลิงก์เว็บปลายทาง (Web Base URL):</label>
-                <input type="text" id="qrTargetUrl" class="w-full px-3 py-2 rounded-xl glass-input text-xs text-slate-700 dark:text-slate-200 font-mono" placeholder="https://dewproject.netlify.app/index.html" oninput="refreshCurrentQR()">
-                <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-1">ใช้โดเมนจริงเพื่อให้มือถือสแกนและเปิดฟังเสียงได้ทันที</p>
-            </div>
-
+            <!-- ปุ่มกดพิมพ์และปิด -->
             <div class="space-y-2">
-                <button onclick="window.print()" class="w-full bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white font-semibold py-3 px-4 rounded-xl shadow-md shadow-teal-500/20 transition text-xs flex items-center justify-center gap-2">
+                <button onclick="window.print()" class="w-full bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white font-semibold py-3.5 px-4 rounded-2xl shadow-md shadow-teal-500/20 transition text-sm flex items-center justify-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                     </svg>
-                    <span>พิมพ์หน้านี้ / พิมพ์ QR Code</span>
+                    <span>พิมพ์ QR Code ติดเอกสาร / ซองยา</span>
                 </button>
                 <button onclick="closeQR()" class="w-full text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white py-2 text-xs font-medium transition">
-                    ปิด
+                    ปิดหน้าต่าง
                 </button>
             </div>
         </div>
@@ -697,32 +693,13 @@
                 if (!onlineDb[id]) unsyncedCount++;
             }
 
-            if (unsyncedCount > 0) {
-                list.innerHTML += `
-                    <div class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs flex items-start gap-3 mb-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                        <div>
-                            <span class="font-bold">พบรายการใหม่ ${unsyncedCount} รายการ ที่ยังไม่ได้อัปเดตลง data.json บนเซิร์ฟเวอร์</span>
-                            <p class="text-[11px] text-amber-700 dark:text-amber-300 mt-0.5">
-                                เพื่อให้โทรศัพท์มือถือสแกนผ่าน ID ได้ทุกเครื่อง กรุณากดปุ่ม <b>"ดาวน์โหลด data.json"</b> ด้านบน นำไปวางทับไฟล์ในโฟลเดอร์ แล้ว Push ขึ้น GitHub หรือใช้ <b>โหมดพกพา</b> ในหน้า QR Code เพื่อสแกนได้ทันทีครับ
-                            </p>
-                        </div>
-                    </div>
-                `;
-            }
-
             for (let id of keys) {
                 const item = db[id];
                 const typeBadge = item.type === 'tts' 
-                    ? '<span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200/50 dark:border-teal-800/40">TTS</span>'
-                    : '<span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-800/40">MP3</span>';
+                    ? '<span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200/50 dark:border-teal-800/40">ระบบอ่านออกเสียง</span>'
+                    : '<span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-800/40">ไฟล์เสียง MP3</span>';
 
-                const isOnline = !!onlineDb[id];
-                const onlineBadge = isOnline
-                    ? '<span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-800/40 flex items-center gap-1">🟢 ออนไลน์บน data.json</span>'
-                    : '<span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200/50 dark:border-amber-800/40 flex items-center gap-1">🟡 ในเครื่องนี้เท่านั้น</span>';
+                const onlineBadge = '<span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-800/40 flex items-center gap-1">🟢 พร้อมใช้งาน</span>';
 
                 list.innerHTML += `
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 rounded-2xl glass-card border border-teal-100/60 dark:border-slate-800 hover:border-teal-300 dark:hover:border-teal-700/60 transition gap-4">
@@ -732,16 +709,16 @@
                                 ${typeBadge}
                                 ${onlineBadge}
                             </div>
-                            <p class="text-xs text-slate-400 dark:text-slate-500 font-mono">ID: ${id}</p>
+                            <p class="text-xs text-slate-400 dark:text-slate-500 font-mono">รหัสอ้างอิง: ${id}</p>
                         </div>
                         <div class="flex items-center gap-2 self-end sm:self-auto">
-                            <button onclick="showQR('${id}')" class="px-4 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white font-medium text-xs shadow-sm shadow-teal-500/20 transition flex items-center gap-1.5">
+                            <button onclick="showQR('${id}')" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white font-medium text-xs shadow-sm shadow-teal-500/20 transition flex items-center gap-1.5">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
                                 </svg>
-                                <span>QR Code</span>
+                                <span>ดู QR Code</span>
                             </button>
-                            <button onclick="deleteRecord('${id}')" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 dark:bg-slate-800 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 text-slate-600 dark:text-slate-300 font-medium text-xs transition flex items-center gap-1">
+                            <button onclick="deleteRecord('${id}')" class="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 dark:bg-slate-800 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 text-slate-600 dark:text-slate-300 font-medium text-xs transition flex items-center gap-1">
                                 <span>ลบ</span>
                             </button>
                         </div>
@@ -757,95 +734,27 @@
         function showQR(id) {
             currentQRId = id;
             const item = db[id];
-            const isOnline = !!onlineDb[id];
-
-            // กำหนดโหมดเริ่มต้น: หากมีใน data.json แล้วให้ใช้ Standard, หากยังไม่มีให้แนะนำ Direct
-            currentQRMode = isOnline ? 'standard' : 'direct';
 
             document.getElementById('qrModal').classList.remove('hidden');
-            document.getElementById('qrTitle').innerText = "QR Code: " + (item?.title || id);
-            document.getElementById('qrSubtitle').innerText = `ID: ${id}`;
+            document.getElementById('qrTitle').innerText = item?.title || "คำแนะนำการดูแลตนเอง";
+            document.getElementById('qrSubtitle').innerText = `รหัสอ้างอิง: ${id}`;
 
-            const statusEl = document.getElementById('qrDbStatus');
-            if (isOnline) {
-                statusEl.className = "mb-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40";
-                statusEl.innerHTML = "<span>🟢 ออนไลน์แล้ว: มีใน data.json บนเซิร์ฟเวอร์</span>";
-            } else {
-                statusEl.className = "mb-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/40";
-                statusEl.innerHTML = "<span>🟡 ยังไม่ออนไลน์: ข้อมูลยังไม่ถูกอัปโหลดขึ้น data.json</span>";
-            }
-
-            const inputEl = document.getElementById('qrTargetUrl');
-            let baseUrl = getPatientBaseUrl();
-            inputEl.value = baseUrl;
-
-            updateQRModeButtons();
-            renderCurrentQR();
-        }
-
-        function setQRMode(mode) {
-            currentQRMode = mode;
-            updateQRModeButtons();
-            renderCurrentQR();
-        }
-
-        function updateQRModeButtons() {
-            const stdBtn = document.getElementById('qrModeStandardBtn');
-            const dirBtn = document.getElementById('qrModeDirectBtn');
-            const desc = document.getElementById('qrModeDesc');
-
-            if (currentQRMode === 'standard') {
-                stdBtn.className = "py-2 px-2.5 rounded-xl border border-teal-500 bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 text-xs font-bold shadow-sm text-center";
-                dirBtn.className = "py-2 px-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 text-xs font-medium text-center";
-                desc.innerHTML = `<b class="text-teal-600 dark:text-teal-400">โหมดมาตรฐาน (?id=...):</b> URL สั้น กะทัดรัด (ต้องมีรายการนี้ในไฟล์ data.json บนเซิร์ฟเวอร์)`;
-            } else {
-                stdBtn.className = "py-2 px-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 text-xs font-medium text-center";
-                dirBtn.className = "py-2 px-2.5 rounded-xl border border-teal-500 bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 text-xs font-bold shadow-sm text-center";
-                desc.innerHTML = `<b class="text-teal-600 dark:text-teal-400">โหมดพกพา (Direct):</b> ฝังเสียงลง QR Code ทันที สแกนฟังได้ทุกเครื่อง 100% โดยไม่ต้องรออัปเดตไฟล์ขึ้น Git`;
-            }
-        }
-
-        function refreshCurrentQR() {
-            if (!currentQRId) return;
-            const customUrl = document.getElementById('qrTargetUrl').value.trim();
-            if (customUrl) {
-                localStorage.setItem('qr_target_base_url', customUrl);
-            }
             renderCurrentQR();
         }
 
         function renderCurrentQR() {
             if (!currentQRId) return;
-            const customUrl = document.getElementById('qrTargetUrl').value.trim();
-            const baseUrl = customUrl || getPatientBaseUrl();
-            const item = db[currentQRId];
-
-            let finalUrl = baseUrl;
-            const separator = finalUrl.includes('?') ? '&' : '?';
-
-            if (currentQRMode === 'standard') {
-                finalUrl = `${finalUrl}${separator}id=${encodeURIComponent(currentQRId)}`;
-            } else {
-                // โหมดพกพา: บรรจุ Title และ Text ลง Base64
-                if (item && item.type === 'tts') {
-                    const payload = encodePayload({
-                        t: item.title,
-                        txt: item.text,
-                        type: 'tts'
-                    });
-                    finalUrl = `${finalUrl}${separator}id=${encodeURIComponent(currentQRId)}&d=${encodeURIComponent(payload)}`;
-                } else {
-                    finalUrl = `${finalUrl}${separator}id=${encodeURIComponent(currentQRId)}`;
-                }
-            }
+            const baseUrl = getPatientBaseUrl();
+            const separator = baseUrl.includes('?') ? '&' : '?';
+            const finalUrl = `${baseUrl}${separator}id=${encodeURIComponent(currentQRId)}`;
 
             const qrBox = document.getElementById('qrcodeBox');
             qrBox.innerHTML = '';
 
             qrcodeObj = new QRCode(qrBox, {
                 text: finalUrl,
-                width: 220,
-                height: 220,
+                width: 210,
+                height: 210,
                 colorDark : "#0f172a",
                 colorLight : "#ffffff",
                 correctLevel : QRCode.CorrectLevel.M

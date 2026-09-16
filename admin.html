@@ -507,21 +507,36 @@
             db[id] = data;
             localStorage.setItem('hospital_db', JSON.stringify(db));
 
-            // ตรวจสอบว่าเปิดผ่านเซิร์ฟเวอร์ Local ทดสอบหรือไม่ (มี endpoint /api/save)
+            let savedToCloud = false;
             let savedLocally = false;
+
+            // 1. ส่งตรงเข้า Netlify Blobs Database แบบ Realtime
             try {
-                const res = await fetch('/api/save', {
+                const res = await fetch('/api/instructions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, ...data })
+                });
+                if (res.ok) {
+                    savedToCloud = true;
+                    onlineDb[id] = data;
+                }
+            } catch(e) {
+                console.warn("Netlify Blobs sync error:", e);
+            }
+
+            // 2. ถ้าเปิดรันบน Local Server ให้บันทึกลงไฟล์ในเครื่องด้วย
+            try {
+                const resLocal = await fetch('/api/save', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(db)
                 });
-                if (res.ok) {
+                if (resLocal.ok) {
                     savedLocally = true;
                     onlineDb[id] = data;
                 }
-            } catch(e) {
-                // เว็บบน Netlify ไม่มี /api/save ซึ่งเป็นเรื่องปกติ
-            }
+            } catch(e) {}
 
             document.getElementById('recordId').value = '';
             document.getElementById('recordTitle').value = '';
@@ -529,37 +544,59 @@
             document.getElementById('mp3File').value = '';
             renderList();
 
-            if (savedLocally) {
-                alert("บันทึกข้อมูลเรียบร้อยแล้ว!\n(อัปเดตไฟล์ data.json และ hospital.db ในโฟลเดอร์ให้อัตโนมัติ)");
+            if (savedToCloud) {
+                alert("✅ บันทึกข้อมูลสำเร็จ!\nระบบได้อัปเดตลงฐานข้อมูล Netlify Blobs เรียบร้อยแล้ว (มือถือสแกนเล่นเสียงได้ทันที 100%)");
+            } else if (savedLocally) {
+                alert("✅ บันทึกข้อมูลเรียบร้อยแล้ว!\n(อัปเดตไฟล์ data.json และ hospital.db ในโฟลเดอร์ให้อัตโนมัติ)");
             } else {
-                alert("บันทึกข้อมูลลงในระบบเรียบร้อยแล้ว!\n\n💡 แนะนำ: หากต้องการให้โทรศัพท์มือถือสแกนผ่านรหัส ID ได้ ให้กดปุ่ม 'ดาวน์โหลด data.json' แล้วนำไปอัปเดตขึ้น GitHub หรือเปิด QR Code เลือกโหมดพกพาเพื่อสแกนได้ทันทีครับ");
+                alert("บันทึกข้อมูลลงในระบบเรียบร้อยแล้ว!\n\n💡 หมายเหตุ: ระบบทำงานผ่านเบราว์เซอร์นี้ หากต้องการให้มือถือสแกนผ่าน ID ได้ทุกเครื่อง สามารถกดดาวน์โหลด data.json นำไป push หรือเปิด QR Code เลือกโหมดพกพาเพื่อสแกนได้ทันทีครับ");
             }
         }
 
-        // โหลดข้อมูลเริ่มต้นจาก data.json (ตัด BOM อัตโนมัติ)
+        // โหลดข้อมูลเริ่มต้นจาก Netlify Blobs API หรือ data.json
         async function syncOnlineJson() {
+            let loadedFromCloud = false;
+            // ลองโหลดจาก Netlify Blobs API ก่อน
             try {
-                const res = await fetch('data.json?v=' + Date.now());
+                const res = await fetch('/api/instructions?v=' + Date.now());
                 if (res.ok) {
-                    const rawText = await res.text();
-                    const cleanText = rawText.replace(/^\uFEFF/, '');
-                    const onlineData = JSON.parse(cleanText);
-                    if (onlineData && typeof onlineData === 'object') {
-                        onlineDb = { ...onlineData };
-                        let updated = false;
-                        for (let k in onlineData) {
-                            if (!db[k]) {
-                                db[k] = onlineData[k];
-                                updated = true;
-                            }
-                        }
-                        if (updated) {
-                            localStorage.setItem('hospital_db', JSON.stringify(db));
-                        }
+                    const cloudData = await res.json();
+                    if (cloudData && typeof cloudData === 'object' && !cloudData.error) {
+                        onlineDb = { ...cloudData };
+                        db = { ...db, ...cloudData };
+                        localStorage.setItem('hospital_db', JSON.stringify(db));
+                        loadedFromCloud = true;
                     }
                 }
             } catch(e) {
-                console.warn("syncOnlineJson error:", e);
+                console.warn("Netlify Blobs fetch error:", e);
+            }
+
+            // หากต่อ Blobs ไม่ได้ ให้ fallback ไปดึง data.json
+            if (!loadedFromCloud) {
+                try {
+                    const res = await fetch('data.json?v=' + Date.now());
+                    if (res.ok) {
+                        const rawText = await res.text();
+                        const cleanText = rawText.replace(/^\uFEFF/, '');
+                        const onlineData = JSON.parse(cleanText);
+                        if (onlineData && typeof onlineData === 'object') {
+                            onlineDb = { ...onlineData };
+                            let updated = false;
+                            for (let k in onlineData) {
+                                if (!db[k]) {
+                                    db[k] = onlineData[k];
+                                    updated = true;
+                                }
+                            }
+                            if (updated) {
+                                localStorage.setItem('hospital_db', JSON.stringify(db));
+                            }
+                        }
+                    }
+                } catch(e) {
+                    console.warn("syncOnlineJson fallback error:", e);
+                }
             }
             renderList();
         }
@@ -587,6 +624,14 @@
                     if (typeof imported === 'object') {
                         db = { ...db, ...imported };
                         localStorage.setItem('hospital_db', JSON.stringify(db));
+                        // ส่งซิงค์ขึ้น Netlify Blobs ด้วย
+                        try {
+                            await fetch('/api/instructions', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(db)
+                            });
+                        } catch(err) {}
                         // บันทึกผ่าน local server ด้วยถ้ามี
                         try {
                             await fetch('/api/save', {
@@ -596,7 +641,7 @@
                             });
                         } catch(err) {}
                         renderList();
-                        alert("นำเข้าข้อมูลจากไฟล์ JSON เรียบร้อยแล้ว");
+                        alert("นำเข้าข้อมูลจากไฟล์ JSON และซิงค์ขึ้นระบบเรียบร้อยแล้ว");
                     } else {
                         alert("โครงสร้างไฟล์ JSON ไม่ถูกต้อง");
                     }
@@ -612,6 +657,15 @@
                 delete db[id];
                 delete onlineDb[id];
                 localStorage.setItem('hospital_db', JSON.stringify(db));
+
+                // ลบบน Netlify Blobs
+                try {
+                    await fetch('/api/instructions?id=' + encodeURIComponent(id), {
+                        method: 'DELETE'
+                    });
+                } catch(e) {}
+
+                // ลบบน local server
                 try {
                     await fetch('/api/save', {
                         method: 'POST',

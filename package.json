@@ -1,0 +1,11 @@
+{
+  "name": "dew-project",
+  "version": "1.0.0",
+  "description": "Patient Care Audio Instructions with Netlify Blobs",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  }
+}

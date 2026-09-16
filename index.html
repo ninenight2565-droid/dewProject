@@ -506,7 +506,22 @@
                 data = decodePayload(rawDataPayload);
             }
 
-            // 3. ดึงจากไฟล์ data.json บนเซิร์ฟเวอร์
+            // 3. ดึงจากฐานข้อมูลคลาวด์ Netlify Blobs API (Realtime สดใหม่ 100%)
+            if (!data && id) {
+                try {
+                    const res = await fetch('/api/instructions?id=' + encodeURIComponent(id) + '&v=' + Date.now());
+                    if (res.ok) {
+                        const cloudRecord = await res.json();
+                        if (cloudRecord && !cloudRecord.error) {
+                            data = cloudRecord;
+                        }
+                    }
+                } catch(err) {
+                    console.warn("Netlify Blobs API lookup error:", err);
+                }
+            }
+
+            // 4. Fallback: ดึงจากไฟล์ data.json บนเซิร์ฟเวอร์
             if (!data && id) {
                 try {
                     const res = await fetch('data.json?v=' + Date.now());
@@ -524,7 +539,7 @@
                 }
             }
 
-            // 4. Fallback: หาจาก localStorage ในเครื่อง (กรณีเปิดดูในเครื่องเดียวกับ Admin)
+            // 5. Fallback: หาจาก localStorage ในเครื่อง (กรณีเปิดดูในเครื่องเดียวกับ Admin)
             if (!data && id) {
                 try {
                     const localDb = JSON.parse(localStorage.getItem('hospital_db')) || {};

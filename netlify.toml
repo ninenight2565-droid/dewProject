@@ -1,0 +1,14 @@
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+# Route /api/instructions directly to the serverless function
+[[redirects]]
+  from = "/api/instructions"
+  to = "/.netlify/functions/api"
+  status = 200
+
+[[redirects]]
+  from = "/api/instructions/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200

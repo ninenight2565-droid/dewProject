@@ -288,9 +288,11 @@
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const idParam = urlParams.get('id');
+            const titleParam = urlParams.get('t');
+            const textParam = urlParams.get('txt');
             const dataParam = urlParams.get('d');
-            if (idParam || dataParam) {
-                loadPatientData(idParam, dataParam);
+            if (idParam || titleParam || dataParam) {
+                loadPatientData(idParam, titleParam, textParam, dataParam);
             }
         });
 
@@ -389,17 +391,21 @@
         // จัดการลิงก์ URL ที่สแกนได้
         function processScan(text) {
             let scannedId = null;
+            let scannedTitle = null;
+            let scannedText = null;
             let scannedData = null;
             try {
                 let url = new URL(text);
                 scannedId = url.searchParams.get("id");
+                scannedTitle = url.searchParams.get("t");
+                scannedText = url.searchParams.get("txt");
                 scannedData = url.searchParams.get("d");
             } catch(e) {
                 scannedId = text.trim();
             }
 
-            if(scannedId || scannedData) {
-                loadPatientData(scannedId, scannedData);
+            if(scannedId || scannedTitle || scannedData) {
+                loadPatientData(scannedId, scannedTitle, scannedText, scannedData);
             } else {
                 alert("รูปแบบ QR Code ไม่ถูกต้อง");
                 resetApp();
@@ -407,12 +413,22 @@
         }
 
         // โหลดข้อมูลและเล่นเสียง
-        async function loadPatientData(id, rawDataPayload) {
+        async function loadPatientData(id, directTitle, directText, rawDataPayload) {
             document.getElementById('scanBox').classList.add('hidden');
             let data = null;
 
-            // 1. ดึงจาก payload ที่ฝังมากับ QR Code (ถ้ามี)
-            if (rawDataPayload) {
+            // 1. ดึงจาก URL parameters ตรงๆ (t และ txt) ที่ฝังมากับ QR Code โดยตรง
+            if (directTitle || directText) {
+                data = {
+                    title: directTitle || "คำแนะนำการดูแลตนเอง",
+                    type: 'tts',
+                    text: directText || '',
+                    audioBase64: ''
+                };
+            }
+
+            // 2. ดึงจาก payload ย่อ d (ถ้ามี)
+            if (!data && rawDataPayload) {
                 try {
                     const parsed = JSON.parse(decodeURIComponent(rawDataPayload));
                     data = {
@@ -426,7 +442,7 @@
                 }
             }
 
-            // 2. ดึงจากไฟล์ data.json บนเว็บออนไลน์ (ตรงกันทุกเครื่อง 100%)
+            // 3. ดึงจากไฟล์ data.json บนเว็บออนไลน์ (สำหรับรายการเดิมที่อยู่ในไฟล์)
             if (!data && id) {
                 try {
                     const res = await fetch('data.json?v=' + Date.now());
@@ -441,7 +457,7 @@
                 }
             }
 
-            // 3. Fallback: หาจาก localStorage ในเครื่อง
+            // 4. Fallback: หาจาก localStorage ในเครื่อง
             if (!data && id) {
                 const localDb = JSON.parse(localStorage.getItem('hospital_db')) || {};
                 data = localDb[id];

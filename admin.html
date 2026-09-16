@@ -617,9 +617,21 @@
         }
 
         function renderQRCodeForId(id, baseUrl) {
+            const item = db[id];
             let finalUrl = baseUrl;
             const separator = finalUrl.includes('?') ? '&' : '?';
-            finalUrl = `${finalUrl}${separator}id=${encodeURIComponent(id)}`;
+
+            // ถ้าเป็นระบบอ่านเสียง (TTS) ให้ฝังหัวข้อและข้อความเสียงลงใน QR Code ทันที
+            // เพื่อให้สแกนจากเครื่องไหนหรือมือถือใดๆ ก็เล่นเสียงได้ทันที 100%
+            if (item && item.type === 'tts') {
+                const params = new URLSearchParams();
+                params.set('id', id);
+                if (item.title) params.set('t', item.title);
+                if (item.text) params.set('txt', item.text);
+                finalUrl = `${finalUrl}${separator}${params.toString()}`;
+            } else {
+                finalUrl = `${finalUrl}${separator}id=${encodeURIComponent(id)}`;
+            }
 
             const qrBox = document.getElementById('qrcodeBox');
             qrBox.innerHTML = '';
@@ -630,7 +642,7 @@
                 height: 220,
                 colorDark : "#0f172a",
                 colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.H
+                correctLevel : QRCode.CorrectLevel.M
             });
         }
 

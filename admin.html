@@ -268,13 +268,24 @@
         // คำนวณ Base URL สำหรับหน้าผู้ป่วย
         function getPatientBaseUrl() {
             const savedUrl = localStorage.getItem('qr_target_base_url');
+            // หาก savedUrl ชี้ไปที่ localhost แต่ตอนนี้รันอยู่บนเว็บจริง ให้ละทิ้ง savedUrl นั้น
             if (savedUrl && savedUrl.trim()) {
-                return savedUrl.trim();
+                const trimmed = savedUrl.trim();
+                if (window.location.protocol.startsWith('http') && !window.location.hostname.includes('localhost')) {
+                    if (trimmed.includes('localhost') || trimmed.includes('127.0.0.1')) {
+                        localStorage.removeItem('qr_target_base_url');
+                    } else {
+                        return trimmed;
+                    }
+                } else {
+                    return trimmed;
+                }
             }
+
             if (window.location.protocol === 'file:') {
                 return window.location.href.replace('admin.html', 'index.html');
             }
-            // ถ้าเปิดผ่านเว็บ เช่น https://dewproject.netlify.app/admin.html
+            // บนเว็บจริง เช่น https://dewproject.netlify.app/admin.html
             return `${window.location.origin}/index.html`;
         }
         let db = JSON.parse(localStorage.getItem('hospital_db')) || {};

@@ -395,12 +395,14 @@
             let scannedText = null;
             let scannedData = null;
             try {
-                let url = new URL(text);
+                // รองรับทั้ง absolute URL (http...) และ query string / relative URL
+                const url = new URL(text, window.location.href);
                 scannedId = url.searchParams.get("id");
                 scannedTitle = url.searchParams.get("t");
                 scannedText = url.searchParams.get("txt");
                 scannedData = url.searchParams.get("d");
             } catch(e) {
+                // ถ้าเป็นข้อความธรรมดา
                 scannedId = text.trim();
             }
 

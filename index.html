@@ -219,16 +219,27 @@
             </div>
         </div>
 
+        <!-- หน้าจอ Loading: ระหว่างดึงข้อมูล -->
+        <div id="loadingBox" class="glass-card p-8 sm:p-12 rounded-[2.5rem] text-center hidden transition-all duration-300">
+            <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 flex items-center justify-center animate-pulse">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+            </div>
+            <h2 class="text-xl font-bold text-slate-900 dark:text-white mb-2">กำลังดึงข้อมูลคำแนะนำ...</h2>
+            <p class="text-slate-400 text-xs" id="loadingText">กำลังเชื่อมต่อคลังข้อมูลผู้ป่วย</p>
+        </div>
+
         <!-- หน้าจอ 3: กรณีหาข้อมูลไม่พบ -->
         <div id="errorBox" class="glass-card p-8 sm:p-12 rounded-[2.5rem] text-center hidden transition-all duration-300">
-            <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center">
+            <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
             </div>
             <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-2">ไม่พบข้อมูลคำแนะนำ</h2>
-            <p class="text-slate-500 dark:text-slate-400 text-sm max-w-sm mx-auto mb-6">
-                รหัส QR Code นี้ยังไม่ได้ลงทะเบียนในระบบ หรือข้อมูลอาจถูกลบไปแล้ว
+            <p id="errorDetail" class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm max-w-md mx-auto mb-6">
+                รหัส QR Code นี้ยังไม่ได้บันทึกลงในฐานข้อมูล data.json บนเซิร์ฟเวอร์
             </p>
             <button onclick="resetApp()" class="max-w-xs w-full mx-auto bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 font-medium py-3 px-6 rounded-2xl transition text-sm">
                 กลับไปสแกนใหม่
@@ -388,28 +399,81 @@
             }
         }
 
-        // จัดการลิงก์ URL ที่สแกนได้
+        // ถอดรหัส Payload ที่ฝังมากับ QR Code อย่างปลอดภัย (รองรับทั้ง URL-encoded และ UTF-8 Base64)
+        function decodePayload(payload) {
+            if (!payload) return null;
+            // 1. ถอดรหัสแบบ URL Encoded JSON
+            try {
+                const parsed = JSON.parse(decodeURIComponent(payload));
+                if (parsed && (parsed.t || parsed.title || parsed.txt || parsed.text)) {
+                    return {
+                        title: parsed.t || parsed.title || "คำแนะนำการดูแลตนเอง",
+                        type: parsed.type || 'tts',
+                        text: parsed.txt || parsed.text || '',
+                        audioBase64: parsed.audioBase64 || ''
+                    };
+                }
+            } catch(e) {}
+
+            // 2. ถอดรหัสแบบ UTF-8 Base64 JSON
+            try {
+                const binary = atob(payload);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                const decodedStr = new TextDecoder('utf-8').decode(bytes);
+                const parsed = JSON.parse(decodedStr);
+                if (parsed && (parsed.t || parsed.title || parsed.txt || parsed.text)) {
+                    return {
+                        title: parsed.t || parsed.title || "คำแนะนำการดูแลตนเอง",
+                        type: parsed.type || 'tts',
+                        text: parsed.txt || parsed.text || '',
+                        audioBase64: parsed.audioBase64 || ''
+                    };
+                }
+            } catch(e) {}
+
+            return null;
+        }
+
+        // จัดการข้อความหรือลิงก์ URL ที่ได้จากการสแกนกล้อง
         function processScan(text) {
+            if (!text) return;
+            text = text.trim();
             let scannedId = null;
             let scannedTitle = null;
             let scannedText = null;
             let scannedData = null;
-            try {
-                // รองรับทั้ง absolute URL (http...) และ query string / relative URL
-                const url = new URL(text, window.location.href);
-                scannedId = url.searchParams.get("id");
-                scannedTitle = url.searchParams.get("t");
-                scannedText = url.searchParams.get("txt");
-                scannedData = url.searchParams.get("d");
-            } catch(e) {
-                // ถ้าเป็นข้อความธรรมดา
-                scannedId = text.trim();
+
+            if (text.startsWith('http://') || text.startsWith('https://')) {
+                try {
+                    const url = new URL(text);
+                    scannedId = url.searchParams.get("id");
+                    scannedTitle = url.searchParams.get("t");
+                    scannedText = url.searchParams.get("txt");
+                    scannedData = url.searchParams.get("d");
+                } catch(e) {
+                    console.warn(e);
+                }
+            } else if (text.startsWith('?') || text.includes('id=')) {
+                try {
+                    const search = text.startsWith('?') ? text : '?' + text;
+                    const urlParams = new URLSearchParams(search);
+                    scannedId = urlParams.get("id");
+                    scannedTitle = urlParams.get("t");
+                    scannedText = urlParams.get("txt");
+                    scannedData = urlParams.get("d");
+                } catch(e) {
+                    console.warn(e);
+                }
+            } else {
+                // หากผู้ใช้สแกนเป็นรหัส ID ตรงๆ (เช่น wound-care-01 หรือ test-01)
+                scannedId = text;
             }
 
-            if(scannedId || scannedTitle || scannedData) {
+            if (scannedId || scannedTitle || scannedData) {
                 loadPatientData(scannedId, scannedTitle, scannedText, scannedData);
             } else {
-                alert("รูปแบบ QR Code ไม่ถูกต้อง");
+                alert("รูปแบบ QR Code ไม่ถูกต้อง: " + text);
                 resetApp();
             }
         }
@@ -417,9 +481,17 @@
         // โหลดข้อมูลและเล่นเสียง
         async function loadPatientData(id, directTitle, directText, rawDataPayload) {
             document.getElementById('scanBox').classList.add('hidden');
+            document.getElementById('contentBox').classList.add('hidden');
+            document.getElementById('errorBox').classList.add('hidden');
+            document.getElementById('loadingBox').classList.remove('hidden');
+
+            if (id) {
+                document.getElementById('loadingText').innerText = `กำลังดึงข้อมูลรหัส: ${id}`;
+            }
+
             let data = null;
 
-            // 1. ดึงจาก URL parameters ตรงๆ (t และ txt) ที่ฝังมากับ QR Code โดยตรง
+            // 1. ดึงจาก URL parameters ตรงๆ (t และ txt) ที่ฝังมากับ QR Code
             if (directTitle || directText) {
                 data = {
                     title: directTitle || "คำแนะนำการดูแลตนเอง",
@@ -431,25 +503,18 @@
 
             // 2. ดึงจาก payload ย่อ d (ถ้ามี)
             if (!data && rawDataPayload) {
-                try {
-                    const parsed = JSON.parse(decodeURIComponent(rawDataPayload));
-                    data = {
-                        title: parsed.t || parsed.title || "คำแนะนำการดูแลตนเอง",
-                        type: parsed.type || 'tts',
-                        text: parsed.txt || parsed.text || '',
-                        audioBase64: parsed.audioBase64 || ''
-                    };
-                } catch(e) {
-                    console.warn("Payload decode error:", e);
-                }
+                data = decodePayload(rawDataPayload);
             }
 
-            // 3. ดึงจากไฟล์ data.json บนเว็บออนไลน์ (สำหรับรายการเดิมที่อยู่ในไฟล์)
+            // 3. ดึงจากไฟล์ data.json บนเซิร์ฟเวอร์
             if (!data && id) {
                 try {
                     const res = await fetch('data.json?v=' + Date.now());
                     if (res.ok) {
-                        const onlineDb = await res.json();
+                        const rawText = await res.text();
+                        // กำจัด UTF-8 BOM อัตโนมัติ ป้องกัน JSON.parse syntax error
+                        const cleanText = rawText.replace(/^\uFEFF/, '');
+                        const onlineDb = JSON.parse(cleanText);
                         if (onlineDb && onlineDb[id]) {
                             data = onlineDb[id];
                         }
@@ -459,28 +524,34 @@
                 }
             }
 
-            // 4. Fallback: หาจาก localStorage ในเครื่อง
+            // 4. Fallback: หาจาก localStorage ในเครื่อง (กรณีเปิดดูในเครื่องเดียวกับ Admin)
             if (!data && id) {
-                const localDb = JSON.parse(localStorage.getItem('hospital_db')) || {};
-                data = localDb[id];
+                try {
+                    const localDb = JSON.parse(localStorage.getItem('hospital_db')) || {};
+                    data = localDb[id];
+                } catch(e) {}
             }
-            
+
+            document.getElementById('loadingBox').classList.add('hidden');
+
             if (data) {
                 currentRecord = data;
-                document.getElementById('errorBox').classList.add('hidden');
                 document.getElementById('contentBox').classList.remove('hidden');
-                document.getElementById('patientTitle').innerText = currentRecord.title;
-                
+                document.getElementById('patientTitle').innerText = currentRecord.title || "คำแนะนำการดูแลตนเอง";
+
                 if (currentRecord.type === 'mp3') {
                     const player = document.getElementById('mp3Player');
                     player.src = currentRecord.audioBase64;
                     player.onended = stopAnimation;
                 }
-                
-                // สั่งเล่นเสียงทันทีหลังสแกนเสร็จ
-                playAudio(); 
+
+                // สั่งเล่นเสียงทันที
+                playAudio();
             } else {
-                document.getElementById('contentBox').classList.add('hidden');
+                const errorMsg = id 
+                    ? `ไม่พบข้อมูลสำหรับรหัส "${id}" ในฐานข้อมูล data.json บนเซิร์ฟเวอร์ กรุณาตรวจสอบว่าได้ทำการ push อัปเดตไฟล์ขึ้น GitHub แล้วหรือยัง`
+                    : `ไม่พบข้อมูลคำแนะนำ รหัส QR Code นี้อาจยังไม่ได้ลงทะเบียนในระบบ`;
+                document.getElementById('errorDetail').innerText = errorMsg;
                 document.getElementById('errorBox').classList.remove('hidden');
             }
         }
@@ -515,6 +586,7 @@
             
             document.getElementById('contentBox').classList.add('hidden');
             document.getElementById('errorBox').classList.add('hidden');
+            document.getElementById('loadingBox').classList.add('hidden');
             document.getElementById('scanBox').classList.remove('hidden');
             stopScanner();
         }

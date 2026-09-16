@@ -236,18 +236,35 @@
 
     <!-- Modal สำหรับแสดง QR Code Minimal Style -->
     <div id="qrModal" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-4">
-        <div class="glass-card p-8 rounded-[2rem] text-center max-w-sm w-full shadow-2xl relative border border-white/80 dark:border-teal-800/30">
+        <div class="glass-card p-6 sm:p-8 rounded-[2rem] text-center max-w-sm w-full shadow-2xl relative border border-white/80 dark:border-teal-800/30">
             <h3 class="text-base font-bold text-slate-900 dark:text-white mb-1" id="qrTitle">QR Code</h3>
-            <p class="text-xs text-slate-400 dark:text-slate-500 mb-6" id="qrSubtitle">สแกนเพื่อรับฟังเสียงคำแนะนำ</p>
+            <p class="text-xs text-slate-400 dark:text-slate-500 mb-2" id="qrSubtitle">สแกนเพื่อรับฟังเสียงคำแนะนำ</p>
             
-            <div class="p-4 bg-white rounded-2xl shadow-inner inline-block mx-auto mb-4">
+            <!-- สถานะของรายการในฐานข้อมูล -->
+            <div id="qrDbStatus" class="mb-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium"></div>
+
+            <div class="p-4 bg-white rounded-2xl shadow-inner inline-block mx-auto mb-3">
                 <div id="qrcodeBox" class="flex justify-center"></div>
             </div>
 
-            <div class="mb-5 text-left">
-                <label class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">ลิงก์เว็บที่สแกนแล้วจะเปิด (Web URL):</label>
-                <input type="text" id="qrTargetUrl" class="w-full px-3 py-2 rounded-xl glass-input text-xs text-slate-700 dark:text-slate-200 font-mono" placeholder="https://your-site.netlify.app" oninput="refreshCurrentQR()">
-                <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-1">สามารถใส่โดเมนเว็บจริงของคุณ เช่น บน Netlify เพื่อให้สแกนจากมือถือได้ทันที</p>
+            <!-- ตัวเลือกโหมด QR Code -->
+            <div class="mb-4 text-left">
+                <label class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1.5">รูปแบบการทำงานของ QR Code:</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" id="qrModeStandardBtn" onclick="setQRMode('standard')" class="py-2 px-2.5 rounded-xl border text-xs font-medium transition text-center">
+                        โหมดมาตรฐาน (ID)
+                    </button>
+                    <button type="button" id="qrModeDirectBtn" onclick="setQRMode('direct')" class="py-2 px-2.5 rounded-xl border text-xs font-medium transition text-center">
+                        โหมดพกพา (Direct)
+                    </button>
+                </div>
+                <p id="qrModeDesc" class="text-[10px] text-slate-400 dark:text-slate-500 mt-1.5 leading-relaxed"></p>
+            </div>
+
+            <div class="mb-4 text-left">
+                <label class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">ลิงก์เว็บปลายทาง (Web Base URL):</label>
+                <input type="text" id="qrTargetUrl" class="w-full px-3 py-2 rounded-xl glass-input text-xs text-slate-700 dark:text-slate-200 font-mono" placeholder="https://dewproject.netlify.app/index.html" oninput="refreshCurrentQR()">
+                <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-1">ใช้โดเมนจริงเพื่อให้มือถือสแกนและเปิดฟังเสียงได้ทันที</p>
             </div>
 
             <div class="space-y-2">
@@ -268,30 +285,42 @@
         // คำนวณ Base URL สำหรับหน้าผู้ป่วย
         function getPatientBaseUrl() {
             const savedUrl = localStorage.getItem('qr_target_base_url');
-            // หาก savedUrl ชี้ไปที่ localhost แต่ตอนนี้รันอยู่บนเว็บจริง ให้ละทิ้ง savedUrl นั้น
             if (savedUrl && savedUrl.trim()) {
                 const trimmed = savedUrl.trim();
-                if (window.location.protocol.startsWith('http') && !window.location.hostname.includes('localhost')) {
-                    if (trimmed.includes('localhost') || trimmed.includes('127.0.0.1')) {
-                        localStorage.removeItem('qr_target_base_url');
-                    } else {
-                        return trimmed;
-                    }
+                // หาก savedUrl ชี้ไปที่ localhost แต่ไม่ได้กำลังรันบน localhost ให้ล้างทิ้ง
+                if (!window.location.hostname.includes('localhost') && (trimmed.includes('localhost') || trimmed.includes('127.0.0.1'))) {
+                    localStorage.removeItem('qr_target_base_url');
                 } else {
                     return trimmed;
                 }
             }
 
-            if (window.location.protocol === 'file:') {
-                return window.location.href.replace('admin.html', 'index.html');
+            // ถ้าเปิดจาก file:/// หรือ localhost ให้ค่าเริ่มต้นชี้ไปที่เซิร์ฟเวอร์จริงบน Netlify
+            // เพื่อให้มือถือที่สแกนจอคอมสามารถเชื่อมต่อเปิดฟังเสียงได้จริง 100%
+            if (window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                return 'https://dewproject.netlify.app/index.html';
             }
-            // บนเว็บจริง เช่น https://dewproject.netlify.app/admin.html
+
+            // บนเซิร์ฟเวอร์จริง เช่น https://dewproject.netlify.app/admin.html
             return `${window.location.origin}/index.html`;
         }
+
         let db = JSON.parse(localStorage.getItem('hospital_db')) || {};
+        let onlineDb = {}; // เก็บรายการที่มีอยู่จริงใน data.json บนเซิร์ฟเวอร์
+
+        // เข้ารหัสข้อมูลเป็น UTF-8 Base64 อย่างปลอดภัย (ไม่พังกับภาษาไทย)
+        function encodePayload(obj) {
+            const jsonStr = JSON.stringify(obj);
+            const bytes = new TextEncoder().encode(jsonStr);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binary);
+        }
 
         // --- Session System (1 Day = 24 Hours Fixed Lifetime) ---
-        const SESSION_DURATION_MS = 24 * 60 * 60 * 1000; // 1 วัน = 86,400,000 มิลลิวินาที
+        const SESSION_DURATION_MS = 24 * 60 * 60 * 1000;
         let sessionTimerInterval = null;
 
         function getSession() {
@@ -308,7 +337,7 @@
             const sessionData = {
                 authenticated: true,
                 loginTime: now,
-                expiresAt: now + SESSION_DURATION_MS // กำหนดเวลาหมดอายุตายตัว 1 วันข้างหน้า
+                expiresAt: now + SESSION_DURATION_MS
             };
             localStorage.setItem('admin_session_auth', JSON.stringify(sessionData));
         }
@@ -324,14 +353,12 @@
                 return false;
             }
             const now = Date.now();
-            // ตรวจสอบหากเป็นเซสชันเก่า (1 ชั่วโมง) ให้อัปเดตเป็น 1 วันอัตโนมัติ
             if (session.expiresAt && session.expiresAt - session.loginTime < SESSION_DURATION_MS) {
                 session.expiresAt = session.loginTime + SESSION_DURATION_MS;
                 localStorage.setItem('admin_session_auth', JSON.stringify(session));
             }
 
             if (now >= session.expiresAt) {
-                // ครบกำหนด 1 วัน
                 clearSession();
                 return false;
             }
@@ -379,7 +406,6 @@
             document.getElementById('loginSection').classList.add('hidden');
             document.getElementById('dashboardSection').classList.remove('hidden');
             startSessionTimer();
-            renderList();
             syncOnlineJson();
         }
 
@@ -420,7 +446,6 @@
         }
         initTheme();
 
-        // ตรวจสอบสถานะการเข้าสู่ระบบเมื่อโหลดหน้าเว็บ
         window.addEventListener('DOMContentLoaded', () => {
             if (checkSessionValidity()) {
                 showDashboard();
@@ -478,25 +503,49 @@
             }
         }
 
-        function saveToDB(id, data) {
+        async function saveToDB(id, data) {
             db[id] = data;
             localStorage.setItem('hospital_db', JSON.stringify(db));
-            alert("บันทึกข้อมูลเรียบร้อยแล้ว");
+
+            // ตรวจสอบว่าเปิดผ่านเซิร์ฟเวอร์ Local ทดสอบหรือไม่ (มี endpoint /api/save)
+            let savedLocally = false;
+            try {
+                const res = await fetch('/api/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(db)
+                });
+                if (res.ok) {
+                    savedLocally = true;
+                    onlineDb[id] = data;
+                }
+            } catch(e) {
+                // เว็บบน Netlify ไม่มี /api/save ซึ่งเป็นเรื่องปกติ
+            }
+
             document.getElementById('recordId').value = '';
             document.getElementById('recordTitle').value = '';
             document.getElementById('ttsText').value = '';
             document.getElementById('mp3File').value = '';
             renderList();
+
+            if (savedLocally) {
+                alert("บันทึกข้อมูลเรียบร้อยแล้ว!\n(อัปเดตไฟล์ data.json และ hospital.db ในโฟลเดอร์ให้อัตโนมัติ)");
+            } else {
+                alert("บันทึกข้อมูลลงในระบบเรียบร้อยแล้ว!\n\n💡 แนะนำ: หากต้องการให้โทรศัพท์มือถือสแกนผ่านรหัส ID ได้ ให้กดปุ่ม 'ดาวน์โหลด data.json' แล้วนำไปอัปเดตขึ้น GitHub หรือเปิด QR Code เลือกโหมดพกพาเพื่อสแกนได้ทันทีครับ");
+            }
         }
 
-        // โหลดข้อมูลเริ่มต้นจาก data.json (ถ้ามี) มารวมกับ localStorage
+        // โหลดข้อมูลเริ่มต้นจาก data.json (ตัด BOM อัตโนมัติ)
         async function syncOnlineJson() {
             try {
                 const res = await fetch('data.json?v=' + Date.now());
                 if (res.ok) {
-                    const onlineData = await res.json();
+                    const rawText = await res.text();
+                    const cleanText = rawText.replace(/^\uFEFF/, '');
+                    const onlineData = JSON.parse(cleanText);
                     if (onlineData && typeof onlineData === 'object') {
-                        // นำข้อมูลจาก data.json มารวมกับ db ถ้าใน db ยังไม่มี
+                        onlineDb = { ...onlineData };
                         let updated = false;
                         for (let k in onlineData) {
                             if (!db[k]) {
@@ -506,18 +555,18 @@
                         }
                         if (updated) {
                             localStorage.setItem('hospital_db', JSON.stringify(db));
-                            renderList();
                         }
                     }
                 }
             } catch(e) {
                 console.warn("syncOnlineJson error:", e);
             }
+            renderList();
         }
 
-        // ดาวน์โหลดข้อมูลทั้งหมดออกมาเป็นไฟล์ data.json เพื่อนำไปวางทับในโฟลเดอร์หรือ push ขึ้น GitHub
+        // ดาวน์โหลดข้อมูลทั้งหมดออกมาเป็นไฟล์ data.json UTF-8 สะอาดไม่มี BOM
         function downloadJsonFile() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 2));
+            const dataStr = "data:application/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 2));
             const downloadAnchor = document.createElement('a');
             downloadAnchor.setAttribute("href", dataStr);
             downloadAnchor.setAttribute("download", "data.json");
@@ -531,12 +580,21 @@
             const file = event.target.files[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = async function(e) {
                 try {
-                    const imported = JSON.parse(e.target.result);
+                    let text = e.target.result.replace(/^\uFEFF/, '');
+                    const imported = JSON.parse(text);
                     if (typeof imported === 'object') {
                         db = { ...db, ...imported };
                         localStorage.setItem('hospital_db', JSON.stringify(db));
+                        // บันทึกผ่าน local server ด้วยถ้ามี
+                        try {
+                            await fetch('/api/save', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(db)
+                            });
+                        } catch(err) {}
                         renderList();
                         alert("นำเข้าข้อมูลจากไฟล์ JSON เรียบร้อยแล้ว");
                     } else {
@@ -549,10 +607,18 @@
             reader.readAsText(file);
         }
 
-        function deleteRecord(id) {
+        async function deleteRecord(id) {
             if(confirm(`ต้องการลบข้อมูลคำแนะนำ "${id}" ใช่หรือไม่?`)) {
                 delete db[id];
+                delete onlineDb[id];
                 localStorage.setItem('hospital_db', JSON.stringify(db));
+                try {
+                    await fetch('/api/save', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(db)
+                    });
+                } catch(e) {}
                 renderList();
             }
         }
@@ -571,18 +637,46 @@
                 return;
             }
 
+            // คำนวณจำนวนรายการที่ยังไม่ได้อัปโหลดขึ้น data.json บนเซิร์ฟเวอร์
+            let unsyncedCount = 0;
+            for (let id of keys) {
+                if (!onlineDb[id]) unsyncedCount++;
+            }
+
+            if (unsyncedCount > 0) {
+                list.innerHTML += `
+                    <div class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs flex items-start gap-3 mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <div>
+                            <span class="font-bold">พบรายการใหม่ ${unsyncedCount} รายการ ที่ยังไม่ได้อัปเดตลง data.json บนเซิร์ฟเวอร์</span>
+                            <p class="text-[11px] text-amber-700 dark:text-amber-300 mt-0.5">
+                                เพื่อให้โทรศัพท์มือถือสแกนผ่าน ID ได้ทุกเครื่อง กรุณากดปุ่ม <b>"ดาวน์โหลด data.json"</b> ด้านบน นำไปวางทับไฟล์ในโฟลเดอร์ แล้ว Push ขึ้น GitHub หรือใช้ <b>โหมดพกพา</b> ในหน้า QR Code เพื่อสแกนได้ทันทีครับ
+                            </p>
+                        </div>
+                    </div>
+                `;
+            }
+
             for (let id of keys) {
                 const item = db[id];
                 const typeBadge = item.type === 'tts' 
-                    ? '<span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200/50 dark:border-teal-800/40">TTS (ระบบอ่าน)</span>'
+                    ? '<span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200/50 dark:border-teal-800/40">TTS</span>'
                     : '<span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-800/40">MP3</span>';
+
+                const isOnline = !!onlineDb[id];
+                const onlineBadge = isOnline
+                    ? '<span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-800/40 flex items-center gap-1">🟢 ออนไลน์บน data.json</span>'
+                    : '<span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200/50 dark:border-amber-800/40 flex items-center gap-1">🟡 ในเครื่องนี้เท่านั้น</span>';
 
                 list.innerHTML += `
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 rounded-2xl glass-card border border-teal-100/60 dark:border-slate-800 hover:border-teal-300 dark:hover:border-teal-700/60 transition gap-4">
                         <div class="space-y-1">
-                            <div class="flex items-center gap-2.5 flex-wrap">
+                            <div class="flex items-center gap-2 flex-wrap">
                                 <h3 class="font-bold text-base text-slate-900 dark:text-white">${item.title}</h3>
                                 ${typeBadge}
+                                ${onlineBadge}
                             </div>
                             <p class="text-xs text-slate-400 dark:text-slate-500 font-mono">ID: ${id}</p>
                         </div>
@@ -604,18 +698,57 @@
 
         let qrcodeObj = null;
         let currentQRId = null;
+        let currentQRMode = 'standard'; // 'standard' หรือ 'direct'
 
         function showQR(id) {
             currentQRId = id;
+            const item = db[id];
+            const isOnline = !!onlineDb[id];
+
+            // กำหนดโหมดเริ่มต้น: หากมีใน data.json แล้วให้ใช้ Standard, หากยังไม่มีให้แนะนำ Direct
+            currentQRMode = isOnline ? 'standard' : 'direct';
+
             document.getElementById('qrModal').classList.remove('hidden');
-            document.getElementById('qrTitle').innerText = "QR Code: " + (db[id]?.title || id);
-            document.getElementById('qrSubtitle').innerText = `ID: ${id} • สแกนเพื่อรับฟังเสียงคำแนะนำ`;
+            document.getElementById('qrTitle').innerText = "QR Code: " + (item?.title || id);
+            document.getElementById('qrSubtitle').innerText = `ID: ${id}`;
+
+            const statusEl = document.getElementById('qrDbStatus');
+            if (isOnline) {
+                statusEl.className = "mb-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40";
+                statusEl.innerHTML = "<span>🟢 ออนไลน์แล้ว: มีใน data.json บนเซิร์ฟเวอร์</span>";
+            } else {
+                statusEl.className = "mb-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/40";
+                statusEl.innerHTML = "<span>🟡 ยังไม่ออนไลน์: ข้อมูลยังไม่ถูกอัปโหลดขึ้น data.json</span>";
+            }
 
             const inputEl = document.getElementById('qrTargetUrl');
             let baseUrl = getPatientBaseUrl();
             inputEl.value = baseUrl;
 
-            renderQRCodeForId(id, baseUrl);
+            updateQRModeButtons();
+            renderCurrentQR();
+        }
+
+        function setQRMode(mode) {
+            currentQRMode = mode;
+            updateQRModeButtons();
+            renderCurrentQR();
+        }
+
+        function updateQRModeButtons() {
+            const stdBtn = document.getElementById('qrModeStandardBtn');
+            const dirBtn = document.getElementById('qrModeDirectBtn');
+            const desc = document.getElementById('qrModeDesc');
+
+            if (currentQRMode === 'standard') {
+                stdBtn.className = "py-2 px-2.5 rounded-xl border border-teal-500 bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 text-xs font-bold shadow-sm text-center";
+                dirBtn.className = "py-2 px-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 text-xs font-medium text-center";
+                desc.innerHTML = `<b class="text-teal-600 dark:text-teal-400">โหมดมาตรฐาน (?id=...):</b> URL สั้น กะทัดรัด (ต้องมีรายการนี้ในไฟล์ data.json บนเซิร์ฟเวอร์)`;
+            } else {
+                stdBtn.className = "py-2 px-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 text-xs font-medium text-center";
+                dirBtn.className = "py-2 px-2.5 rounded-xl border border-teal-500 bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 text-xs font-bold shadow-sm text-center";
+                desc.innerHTML = `<b class="text-teal-600 dark:text-teal-400">โหมดพกพา (Direct):</b> ฝังเสียงลง QR Code ทันที สแกนฟังได้ทุกเครื่อง 100% โดยไม่ต้องรออัปเดตไฟล์ขึ้น Git`;
+            }
         }
 
         function refreshCurrentQR() {
@@ -624,13 +757,33 @@
             if (customUrl) {
                 localStorage.setItem('qr_target_base_url', customUrl);
             }
-            renderQRCodeForId(currentQRId, customUrl || getPatientBaseUrl());
+            renderCurrentQR();
         }
 
-        function renderQRCodeForId(id, baseUrl) {
+        function renderCurrentQR() {
+            if (!currentQRId) return;
+            const customUrl = document.getElementById('qrTargetUrl').value.trim();
+            const baseUrl = customUrl || getPatientBaseUrl();
+            const item = db[currentQRId];
+
             let finalUrl = baseUrl;
             const separator = finalUrl.includes('?') ? '&' : '?';
-            finalUrl = `${finalUrl}${separator}id=${encodeURIComponent(id)}`;
+
+            if (currentQRMode === 'standard') {
+                finalUrl = `${finalUrl}${separator}id=${encodeURIComponent(currentQRId)}`;
+            } else {
+                // โหมดพกพา: บรรจุ Title และ Text ลง Base64
+                if (item && item.type === 'tts') {
+                    const payload = encodePayload({
+                        t: item.title,
+                        txt: item.text,
+                        type: 'tts'
+                    });
+                    finalUrl = `${finalUrl}${separator}id=${encodeURIComponent(currentQRId)}&d=${encodeURIComponent(payload)}`;
+                } else {
+                    finalUrl = `${finalUrl}${separator}id=${encodeURIComponent(currentQRId)}`;
+                }
+            }
 
             const qrBox = document.getElementById('qrcodeBox');
             qrBox.innerHTML = '';
@@ -641,7 +794,7 @@
                 height: 220,
                 colorDark : "#0f172a",
                 colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.H
+                correctLevel : QRCode.CorrectLevel.M
             });
         }
 
